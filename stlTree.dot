@@ -1,29 +1,17 @@
 digraph stlTree {
 	"Content_0"[label="Content"];
-	"Negation_0"[label="Negation [0]"];
-	"Content_0" -> "Negation_0";
 	"Until_0"[label="Until [0]"];
-	"Negation_0" -> "Until_0";
-	"IntValue_0"[label="0"];
-	"Until_0" -> "IntValue_0";
-	"IntValue_1"[label="300"];
-	"Until_0" -> "IntValue_1";
-	"And_0"[label="And [0]"];
-	"Until_0" -> "And_0";
+	"Content_0" -> "Until_0";
 	"QuantitativeSignal_0"[label="QuantitativeSignal [0]"];
-	"And_0" -> "QuantitativeSignal_0";
-	"Signal_0"[label="Signal: x1"];
+	"Until_0" -> "QuantitativeSignal_0";
+	"Signal_0"[label="Signal: q"];
 	"QuantitativeSignal_0" -> "Signal_0";
-	"Negation_3"[label="Negation [3]"];
-	"And_0" -> "Negation_3";
-	"Until_1"[label="Until [1]"];
-	"Negation_3" -> "Until_1";
-	"IntValue_2"[label="3"];
-	"Until_1" -> "IntValue_2";
-	"IntValue_3"[label="5"];
-	"Until_1" -> "IntValue_3";
+	"FloatValue_0"[label="0.5"];
+	"Until_0" -> "FloatValue_0";
+	"FloatValue_1"[label="2.5"];
+	"Until_0" -> "FloatValue_1";
 	"QuantitativeSignal_1"[label="QuantitativeSignal [1]"];
-	"Until_1" -> "QuantitativeSignal_1";
-	"Signal_1"[label="Signal: x2"];
+	"Until_0" -> "QuantitativeSignal_1";
+	"Signal_1"[label="Signal: p"];
 	"QuantitativeSignal_1" -> "Signal_1";
 }

@@ -46,3 +46,4 @@ Examples:  (I didn't make multiple formula files, but always replaced it in the 
 - python stl.py formula.stl signals/ex_1c.csv quantitative
   used formula: q U{0.5,2.5} p
   example until in quantitative semantics presented in the report
+
