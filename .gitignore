@@ -3,3 +3,5 @@
 /envSur
 /venv
 /scratches/
+*.jar
+*.jar.old
