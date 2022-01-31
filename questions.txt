@@ -1,0 +1,6 @@
+AbsoluteValueNode:
+	When implementing this node, the values of a signal get inverted if (and only if) they're negative.
+	Take a sine wave signal, with recorded value each time the value == 1 or -1. Then we have a first checkpoint at pi/4, and then every pi/2. The derivatives for this signal are clearly non-zero.
+	Assume this signal is passed through an absolute value node, then the signal becomes, in essence, a constant. Should the derivatives be updated to reflect that?
+		Laurens' code did not do this. Mine does currently.
+		Unsure if code requiring derivatives computes them as needed.

@@ -8,4 +8,6 @@ continuation_align_style = space
 dedent_closing_brackets = true
 indent_blank_lines = false
 split_before_dot = true
+split_before_first_argument = false
+column_limit = 100
 use_tabs = true
