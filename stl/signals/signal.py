@@ -1,10 +1,12 @@
 from .signalvalue import SignalValue
 import pandas as pd
-from typing import List
+from typing import List, Tuple
 import warnings
 import numpy
 from sortedcontainers import SortedList
 from ..utility import binarySearch
+from ..utility import Interval
+
 
 # TODO: Maybe replace checkpoints with list of times + dict[Time -> Value, Derivative]
 class Signal:
@@ -33,8 +35,68 @@ class Signal:
 				values = []
 			if derivatives is None:
 				derivatives = []
-			self.checkpoints: List[SignalValue] = SortedList([SignalValue(x, y, d) for x, y, d in zip(times, values, derivatives)], key = lambda x: x.getTime())
+			self.checkpoints: SortedList[SignalValue] = SortedList([SignalValue(x, y, d) for x, y, d in zip(times, values, derivatives)], key = lambda x: x.getTime())
 	
+	@classmethod
+	def fromBooleanSignal(cls, s: 'BooleanSignal'): # type: ignore  (Necessary because pylance doesn't support this annotation)
+		if not s.checkpoints:
+			return cls(s.getName())
+		times, values, derivatives = zip(*[(cp.getTime(), cp.getValue(), cp.getDerivative()) for cp in s.checkpoints])
+		# Drop the derivatives, BooleanSignal doesn't use those.
+		newSignal = cls(s.getName(), times, values, derivatives)
+		newSignal.recomputeDerivatives()
+		return newSignal
+
+	def getInterval(self, interval: Interval, half_open: bool = False) -> 'Signal':
+		# Get an interval of a signal between time steps a and b
+		# If half open, the last value of time step b will not be included
+		constructedSignalName = f"{self.getName()}_interval"
+		if interval.getLower() > self.getTime(-1):
+			return Signal(constructedSignalName, [interval.getLower(), interval.getUpper()+1], [self.getValue(-1)]*2, [0, 0])
+		warnings.warn("Dropped upper() < time check")
+		# elif interval.getUpper() < self.getTime(0):
+		# 	return Signal(constructedSignalName, [interval.getLower(), interval.getUpper()+1], [self.getValue(0)]*2, [0, 0])
+		# Find the first value of the signal that is in the interval
+		x = self.getSmallestTimeAfter(interval.getLower())
+		# If the interval is [a, a]
+		if interval.getLower() == interval.getUpper():
+			if half_open:
+				# In case of half open, that's an empty interval
+				warnings.warn("Returning empty signal in getSignalInterval")
+				return Signal(constructedSignalName)
+			else:
+				# If closed, we should get one value at time interval.getLower()
+				warnings.warn("Dropped some derivative code here, verify that the functionality is correct.")
+				#TODO: Ensure above warning doesn't apply. Derivative is currently [0] everywhere on last element.
+				# Not sure what computation in original implementation was for (see below.)
+				
+				# if signal[0].index(x) == 0:
+				# 	derivative = 0
+				# else:
+				# 	derivative = signal[2][signal[0].index(x) - 1]
+				return Signal(constructedSignalName, [interval.getLower()], [self.getAffinePoint(interval.getLower())], [0])
+		# Search the last value of the signal that is in the interval
+		# Inclusive if the interval is closed
+		y = self.getLargestTimeBefore(interval.getUpper(), not half_open) 
+		# Now, [x, y] is the interval in signal checkpoints, with x >= a and y <= b.
+		result = Signal(constructedSignalName)
+		# Do this separately since Signal only allows construction in ascending order of time
+		if x > interval.getLower():
+			# We dropped part of the interval here, because we don't have an exact checkpoint. Compute best estimate.
+			result.emplaceCheckpoint(interval.getLower(), self.getAffinePoint(interval.getLower()), numpy.diff([self.getValue(0), self.getValue(1)]) / numpy.diff([self.getTime(0), self.getTime(1)]))
+		# if x == interval.getLower(), it'll be included in getSubset so we don't have to worry about else clause
+
+		# Our computation of y already includes the half-open property, so here we can just always have a half-open interval
+		for signalvalue in self.getSubset(x, y, False): 
+			result.addCheckpoint(signalvalue)
+		# if y == interval.getUpper() (and it should be included), it'll be included by the subset.
+		# half_open in this case doesn't really do much - it only makes it so the last checkpoint of signal isn't considered if it's exactly equal. 
+		# TODO: Is half_open not applying when timestamp not in signal intentional?
+		if y < interval.getUpper():
+			result.emplaceCheckpoint(interval.getUpper(), self.getAffinePoint(interval.getUpper()), numpy.diff([self.getValue(-2), self.getValue(-1)] / numpy.diff([self.getTime(-2), self.getTime(-1)])))
+
+		return result
+
 	def getValues(self) -> List[float]:
 		return [x.getValue() for x in self.checkpoints]
 
@@ -51,14 +113,21 @@ class Signal:
 		return self.name
 
 	def getIndexForTime(self, t: float) -> int:
-		return binarySearch(t, self.checkpoints, lambda x: x.getTime())[0]
+		assert t in self.getTimes()
+		# Only the key element (time) matters for lookup
+		return self.checkpoints.bisect_left(SignalValue(t, 0, 0))
+		# return binarySearch(t, self.checkpoints, lambda x: x.getTime())[0]
 		
 	def getSubset(self, x: float, y: float, halfopen: bool = False) -> List[SignalValue]:
 		assert x in self.getTimes() and y in self.getTimes()
-		xIndex, _ = binarySearch(x, self.checkpoints, lambda x: x.getTime())
-		yIndex, _ = binarySearch(y, self.checkpoints, lambda x: x.getTime())
+		# SortedList uses the .getTime() function to grab the key
+		# re-using SignalValue class is easiest way to avoid erroring
+		xIndex = self.checkpoints.bisect_left(SignalValue(x, 0, 0))
+		yIndex = self.checkpoints.bisect_left(SignalValue(y, 0, 0))
 		if halfopen:
+			# print(f"Subset[{x}, {y}, halfopen={halfopen}] of {self.oldFormat()} =\n\t{self.checkpoints[xIndex:yIndex]} (Indices: [{xIndex}, {yIndex}])")
 			return self.checkpoints[xIndex:yIndex]
+		# print(f"Subset[{x}, {y}, halfopen={halfopen}] of {self.oldFormat()} =\n\t{self.checkpoints[xIndex:yIndex+1]} (Indices: [{xIndex}, {yIndex+1}])")
 		return self.checkpoints[xIndex:yIndex + 1]
 
 	def computeDerivatives(self, times: List[float], values: List[float]) -> List[float]:
@@ -74,36 +143,39 @@ class Signal:
 		# Returns the checkpoint in self.checkpoints with c.getTime() largest
 		return self.checkpoints[-1].getTime()
 
-	def getLargestTimeBefore(self, currentTime: float, inclusive: bool = True) -> float:
+	def getLargestTimeBefore(self, time: float, inclusive: bool = True) -> float:
 		if inclusive:
 			compare = lambda x, y: x <= y
 		else:
 			compare = lambda x, y: x < y
-		# This method assumes the times are sorted in ascending order
 		# Time must not be negative
-		assert currentTime >= 0
+		assert time >= 0
 		# Iterate over all checkpoints, reverse order
-		for cp in reversed(self.checkpoints):
-			# Keep going as long as parameter time < checkpoint time
-			if compare(cp.getTime(), currentTime):
+		for i in reversed(range(len(self.checkpoints))):
+			cp = self.checkpoints[i]
+			if compare(cp.getTime(), time):
 				# If checkpoint time <= currentTime, we have the largest time before currentTime
 				# Because we are going through the cp times in descending order
 				return cp.getTime()
-		raise RuntimeError(f"Failed to find largestTimeBefore({currentTime}) for {self}")
+		raise RuntimeError(f"Failed to find largestTimeBefore({time}) for {self}")
 	
-	def getSmallestTimeAfter(self, currentTime: float, inclusive: bool = True) -> float:
+	def getSmallestTimeAfter(self, time: float, inclusive: bool = True) -> float:
+		print("Getting smallestTimeAfter:", time)
+		if time == 2:
+			pass
 		if inclusive:
 			compare = lambda x, y: x >= y
 		else:
 			compare = lambda x, y: x > y
 		# This method assumes the times are sorted in ascending order
 		# Time must not be negative
-		assert currentTime >= 0
+		assert time >= 0
 		for cp in self.checkpoints:
-			if compare(cp.getTime(), currentTime):
+			if compare(cp.getTime(), time):
 				# We're going through times in ascending order, so this is the smallest cptime after currentTime
+				print(f"\tValue = {cp.getTime()}")
 				return cp.getTime()
-		raise RuntimeError(f"Failed to find smallestTimeBefore({currentTime}) for {self}")
+		raise RuntimeError(f"Failed to find smallestTimeAfter({time}) for {self}")
 
 	def getTime(self, index: int) -> float:
 		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
@@ -162,37 +234,69 @@ class Signal:
 
 	# Similar to addCheckpoint, but creates the SignalValue internally
 	def emplaceCheckpoint(self, time: float, value: float, derivative: float = None) -> None:
-		if derivative is None:
-			warnings.warn("Replaced None derivative with 0. Ensure this is correct behaviour.")
+		# if derivative is None:
+		# 	warnings.warn("Replaced None derivative with 0. Ensure this is correct behaviour.")
 		self.checkpoints.add(SignalValue(time, value, derivative if derivative is not None else 0))
 
-	def popCheckpoint(self) -> None:
-		self.checkpoints.pop()
+	def oldFormat(self) -> List[List[float]]:
+		# Might be useful sometime. 
+		return [self.getTimes(), self.getValues(), self.getDerivatives()]
+
+	def popCheckpoint(self) -> SignalValue:
+		return self.checkpoints.pop()
+
+	def intersectAtIndex(self, other: 'Signal', index: int) -> Tuple[float, float]:
+		assert index > 0 and len(self.checkpoints) > index, "Requested index is out of range for the current signal."
+		assert len(other.checkpoints) > index, "Requested index out of range for the other signal."
+		xdiff = self.getTime(index-1) - self.getTime(index), other.getTime(index-1) - other.getTime(index)
+		ydiff = self.getValue(index-1) - self.getValue(index), other.getValue(index-1) - other.getValue(index)
+
+		def det(a: Tuple[float, float], b: Tuple[float, float]):
+			return a[0] * b[1] - a[1] * b[0]
+
+		div = det(xdiff, ydiff)
+		if div == 0:
+			raise Exception('lines do not intersect')
+		d = [det((x.getTime(index-1), x.getValue(index-1)), (x.getTime(index), x.getValue(index))) for x in [self, other]]
+		x = det(d, xdiff) / div
+		y = det(d, ydiff) / div
+		return x, y
 
 	# Get the value of a signal at time step t
-	def getAffinePoint(signal, t):
-		if t > max(signal[0]):  # If affine point outside of the given signal
-			return signal[1][-1] + signal[2][-1] * (t - signal[0][-1])  # Calculate using derivative (fplc)
-		# Search the location of the time step t in the signal
+	def getAffinePoint(self, t: float) -> float:
+		if t > self.getLargestTime():
+			# Compute using derivative if it falls outside of known values
+			return self.getValue(-1) + self.getDerivative(-1) * (t - self.getTime(-1))
 		i = 0
-		while signal[0][i] <= t:
-			# If a value already exists on t
-			if signal[0][i] == t:
-				return signal[1][i]
+		# If it's within known values, find the correct time step
+		while self.getTime(i) < t:
 			i += 1
-		# If the time step t is before the singal started
-		if i == 0:
-			return signal[1][i]
-		# If the time step t is after the signal
-		elif i >= len(signal[0]):
-			return signal[1][-1]
-		# If the time step t is somewhere in the signal but no value exists yet, calculate knowing it's fplc
+		if i == 0 or self.getTime(i) == t:
+			# If point before signal started, return first data point
+			# If it's an exact data point in the signal, return corresponding value
+			return self.getValue(i)
+		elif i >= self.getCheckpointCount():
+			# If it's after the end of signal, return last data point
+			return self.getValue(-1)
 		else:
-			return float(signal[1][i] - signal[1][i - 1]) / float(signal[0][i] -
-																														signal[0][i - 1]) * float(t - signal[0][i - 1]) + signal[1][i - 1]
+			# If it's somewhere between two data points, interpolate
+			value = self.getValue(i - 1)
+			value += (self.getValue(i) - self.getValue(i-1)) / ((self.getTime(i) - self.getTime(i-1)) * t - self.getTime(i-1))
+			return value	# Get the value of a signal at time step t
+
+	# Get a derivative of the signal at time step t
+	def getAffineDerivative(self, t: float):
+		if t < self.getTime(0):
+			return 0
+		for i in range(self.getCheckpointCount()):
+			if t < self.getTime(i):
+				# Signal is linearly interpolated between points, so derivative is constant on the interval [i-1, i)
+				return self.getDerivative(i-1)
 
 
 	def __eq__(self, other: 'Signal') -> bool:
+		if type(self) != type(other):
+			return False
 		if self.name != other.name:
 			return False
 		if len(self.checkpoints) != len(other.checkpoints):
@@ -201,152 +305,3 @@ class Signal:
 			if scp != ocp:
 				return False
 		return True
-
-
-def booleanize(value: float):
-	return 1 if value > 0 else 0
-
-# TODO: Verify if there are any other behavioural differences.
-# For example, in quantitative, we might interpolate the value of signal between
-# checkpoints, this is undesirable for the boolean case, most likely.
-class BooleanSignal(Signal):
-	# BooleanSignal is a special case of a signal, with an additional requirement on the values (only 1 (T) or 0 (F) allowed)
-	# There's a few algorithmic differences as well; these will be handled in the algorithm functions.
-	def __init__(self, name: str = None, times: List[float] = None, values: List[float] = None, derivatives: List[float] = None) -> None:
-		if values and not all([x == 1 or x == 0 for x in values]):
-			newValues = [booleanize(x) for x in values]
-			warnings.warn(f"Booleanized a non-Boolean value list in the BooleanSignal class:\n\t{values}\n\t==>\n\t{newValues}\nValue <= 0 is considered False in this conversion.")
-			values = newValues
-		assert derivatives is None or all([x == 0 for x in derivatives]), f"Boolean signal initialized with non-zero derivative values: {derivatives}"
-		# In case of empty signal, fill empty lists + dummy name
-		if name is None:
-			name = "autogeneratedBoolean"
-			assert times is None and values is None and derivatives is None
-			times, values, derivatives = [], [], []
-		if values is None:
-			values = []
-		else:
-			assert times is not None, "DEBUG ASSERT: have to autogenerate timestamps"
-		if times is None:
-			times = []
-		else:
-			assert values is not None, "We can't autogenerate values for times."
-		if derivatives is None:
-				# Set derivative to all zeroes, since it's not meaningful for a Boolean signal
-				derivatives = [0] * len(times)
-		# We don't necessarily fill in all None-valued arguments. The super class (Signal) will take care of this for us.
-		super().__init__(name, times, values, derivatives)
-	
-	def emplaceCheckpoint(self, time: float, value: float, derivative: float = None) -> None:
-		# Booleanize the value
-		if value not in [1, 0]:
-			value = booleanize(value)
-		# Add the checkpoint to the list. Derivative should be zero always, I think, for BooleanSignal.
-		# For now, we still allow non-zero if explicitly given, since we haven't verified that.
-		# TODO: Determine if non-zero derivative for BooleanSignal can ever happen
-		self.checkpoints.add(SignalValue(time, value, derivative if derivative is not None else 0))
-	
-	def recomputeDerivatives(self):
-		for cp in self.checkpoints:
-			cp.setDerivative(0)
-
-	@classmethod
-	def fromSignal(cls, s: Signal):
-		# Get the components of the original Signal
-		times, values, derivatives = zip(*[(cp.getTime(), cp.getValue(), cp.getDerivative()) for cp in s.checkpoints])
-		# Drop the derivatives, BooleanSignal doesn't use those.
-		return cls(s.getName(), times, values, [0] * len(derivatives))
-
-	
-
-
-
-class SignalList(List[Signal]):
-	# A class for managing a list of Signals.
-
-	# Init is handled by List, so just pass-through
-	def __init__(self, *args, **kwargs) -> None:
-		super().__init__(*args, **kwargs)
-
-	# TODO: Optimisation? Is switching to sorted list worth? For now, no performance issues.
-	def getByName(self, name: str) -> Signal:
-		signal: Signal
-		for signal in self:
-			if signal.getName() == name:
-				return signal
-		raise RuntimeError(F"Signal with name '{name}' not found.")
-		
-	@classmethod
-	def fromCSV(cls, csv: str) -> 'SignalList':
-		# Read Signals from CSV, return a SignalList instance
-		# Column names in CSV should be 's', 's_t' and 's_d' for signal s (s must not contain '_')
-		data = pd.read_csv(csv)
-		colTitles = data.columns.values
-		# Ensure columns are named correctly
-		_verifyTitleNaming(colTitles)
-		# Get the data from the dataframe
-		signals, timestamps, derivatives = _findSignalColumns(colTitles), _findTimestampColumns(colTitles), _findDerivativeColumns(colTitles)
-		_verifyColumns(signals, timestamps, derivatives, colTitles)
-		# If we only have Boolean values, use the BooleanSignal class to initialize
-		signalDataType = BooleanSignal if _isAllBooleanSignals(signals) else Signal
-		ret = []
-		for signal in signals:
-			# Pattern as expected (and verified), read from dataframe into list of Signals
-			timestamp = signal + '_t'
-			derivative = signal + '_d'
-			# Add Signal to the list
-			if len(derivatives) != 0:
-				ret.append(signalDataType(signal, list(data.loc[:,timestamp]), list(data.loc[:, signal]), list(data.loc[:,derivative])))
-			else:
-				ret.append(signalDataType(signal, list(data.loc[:,timestamp]), list(data.loc[:,signal])))
-		return SignalList(ret)
-
-
-
-# Helper functions for input handling
-
-
-def _isAllBooleanSignals(signals: List[List[float]]) -> bool:
-	return all([all([x == 1 or x == 0 for x in signal]) for signal in signals])
-
-
-def _findSignalColumns(colTitles: List[str]) -> List[str]:
-	return _findAllMatchingPattern(colTitles, '_', invertCondition = True)
-
-# Timestamps must be labeled 'x_t' for any signal x
-def _findTimestampColumns(colTitles: List[str]) -> List[str]:
-	return _findAllMatchingPattern(colTitles, '_t')
-	
-# Derivatives must be labeled 'x_d' for any signal x
-def _findDerivativeColumns(colTitles: List[str]) -> List[str]:
-	return _findAllMatchingPattern(colTitles, '_d')
-	
-def _findAllMatchingPattern(collection: List[str], pattern: str, invertCondition: bool = False) -> List[str]:
-	if invertCondition:
-		return [c for c in collection if pattern not in c]
-	return [c for c in collection if pattern in c]
-	
-def _verifyTitleNaming(titles: List[str]) -> None:
-	# Underscores may only be followed by 'd' and 't', and that must be the end of the string.
-	for title in titles:
-		try:
-			underscore = title.rindex('_')
-		except ValueError:
-		# Titles with no underscores present are allowed
-			continue
-		assert title[underscore + 1] in ['d', 't'], "Underscore must be followed by either 'd' or 't'. No other character is allowed."
-		assert underscore + 1 == len(title) - 1, "The '_d' or '_t' pattern present in signal name must be the last part of the signal name."
-
-def _verifyColumns(signals: List[str], timestamps: List[str], derivatives: List[str], colTitles: List[str]) -> None:
-	# Verify all data is extracted
-	assert len(signals) + len(timestamps) + len(derivatives) == len(colTitles), "Extracted column count does not match csv column count."
-	# Verify we have the same amount of data points for each.
-	assert len(timestamps) == len(signals), "Signal value and timestamp lists must have the same length."
-	# Ensure all timestamps are found in the signals
-	assert all([timestamp[:-2] in signals for timestamp in timestamps]), "Timestamp names, without '_t' must all be found in signal names."
-	assert all([signal + '_t' in timestamps for signal in signals]), "Signal names, with '_t' suffix must all be found in timestamp names."
-	# Ensure all derivatives 
-	if len(derivatives) != 0:
-		assert all([derivative[:-2] in signals for derivative in derivatives]), "Derivative names, without '_d' must all be found in signal names."
-		assert all([signal + '_d' in derivatives for signal in signals]), "Signal names, with '_d' suffix must all be found in derivative names."
-		assert len(derivatives) == len(signals), "If any derivatives are present, all derivatives must be present."

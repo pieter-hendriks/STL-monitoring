@@ -10,12 +10,19 @@ class ContentNode(Node):
 
 	def validate(self, signals: SignalList, semantic: str = 'quantitative', plot: bool = False) -> Union[bool, float]:
 		assert semantic in ['boolean', 'quantitative']
-		if plot:  # Create subplots if necessary
+		# Create subplots
+		if plot:  
 			plotAmount = self.calculatePlotAmount()
 			PlotHelper().createSubplots(plotAmount)
-			result = self.children[0].validate(signals, semantic, True)
-			PlotHelper().show()
-			return result
+		# Make sure we use the correct child functions based on current semantics
+		if semantic == 'quantitative':
+			result = self.children[0].quantitativeValidate(signals, plot)
+		elif semantic == 'boolean':
+			result = self.children[0].booleanValidate(signals, plot)
 		else:
-			result = self.children[0].validate(signals, semantic, False)
-			return result
+			raise RuntimeError(f"Unknown semantic specified: {semantic}")
+		# Show the plots if we generated any
+		if plot:
+			PlotHelper().show()
+		# Return the result
+		return result

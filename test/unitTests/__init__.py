@@ -1,5 +1,2 @@
-from .testSignalNode import SignalNodeTest
-from .testIntValueNode import IntValueNodeTest
-from .testFloatValueNode import FloatValueNodeTest
-from .testAbsoluteValueNode import AbsoluteValueNodeTest
-from .testProductNode import ProductNodeTest
+from .nodeTests import *
+from .helperTests import *

@@ -38,12 +38,7 @@ class Node:  # Abstract class
 	# Expects a string with the type of semantic that will be used
 	# returns a single signal or number
 	def validate(self, signals: SignalList, semantic: str='quantitative', plot: bool=False) -> Union[Signal, BooleanSignal]:
-		if semantic == 'quantitative':
-			return self.quantitativeValidate(signals, plot)
-		elif semantic == 'boolean':
-			return self.booleanValidate(signals, plot)
-		else:
-			raise RuntimeError(f"Unknown semantic: {semantic}")
+		raise RuntimeError("Base Node validate() called.")
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
 		raise RuntimeError("Base quant validate")
@@ -53,7 +48,7 @@ class Node:  # Abstract class
 
 	# To know how many plots will be made
 	def calculatePlotAmount(self) -> int:
-		return sum([x.calculatePlotAmount() for x in self.children]) + 0
+		return sum([x.calculatePlotAmount() for x in self.children])
 
 	# Processes the token (terminal node in ANTLR AST)
 	def processToken(self, token: str) -> None:

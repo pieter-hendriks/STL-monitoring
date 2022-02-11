@@ -15,7 +15,6 @@ class IntValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testPositiveValue(self):
@@ -27,7 +26,6 @@ class IntValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [123], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [1], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testNegativeValue(self):
@@ -40,7 +38,6 @@ class IntValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [-123], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 

@@ -11,3 +11,26 @@ class Interval:
 
 	def getUpper(self) -> float:
 		return self.upperLimit
+	
+	def __eq__(self, other: 'Interval') -> bool:
+		if not isinstance(other, Interval):
+			return super().__eq__(other)
+		return self.lowerLimit == other.lowerLimit and self.upperLimit == other.upperLimit
+	
+	def __str__(self) -> str:
+		return self.__repr__()
+
+	def __repr__(self) -> str:
+		return f"Interval({self.lowerLimit}, {self.upperLimit})"
+
+	def __add__(self, const: Number) -> 'Interval':
+		return Interval(self.lowerLimit + const, self.upperLimit + const)
+
+	def __sub__(self, const: Number) -> 'Interval':
+		return Interval(self.lowerLimit - const, self.upperLimit + const)
+
+	def __mult__(self, const: Number) -> 'Interval':
+		return Interval(self.lowerLimit * const, self.upperLimit + const)
+
+	def __div__(self, const: Number) -> 'Interval':
+		return Interval(self.lowerLimit / const, self.upperLimit + const)

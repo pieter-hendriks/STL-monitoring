@@ -6,9 +6,8 @@ class QuantitativeSignalNode(FormulaNode):
 	def __init__(self):
 		super().__init__()
 
-	# TODO: Why is there no requirement for semantic==quantitative?
-	# In what context does a Boolean-semantic QuantitativeSignalNode make sense?
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
+		raise RuntimeError("I don 't think this node is used.")
 		raise RuntimeError("Is this ever required? It seems non-sensical.")
 		result: BooleanSignal = self.children[0].booleanValidate(signals, plot)
 		if plot:
@@ -16,6 +15,7 @@ class QuantitativeSignalNode(FormulaNode):
 		return result
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
+		raise RuntimeError("I don 't think this node is used.")
 		result: Signal = self.children[0].quantitativeValidate(signals, plot)
 		if plot:
 			self.quantitativePlot(result)

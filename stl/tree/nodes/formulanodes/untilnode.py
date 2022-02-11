@@ -1,37 +1,68 @@
 from .formulanode import FormulaNode
 from ..valuenodes import ValueNode
-from ....stlUtils import getSignalInterval, getAffineDerivative, getAffinePoint, calculate_and_or, getPunctualIntersection, getBooleanIntersection
+from ....stlUtils import calculate_and_or, getPunctualIntersection, getBooleanIntersection
 from ....utility import Interval
 from ....signals import Signal, BooleanSignal, SignalList, SignalValue
-from typing import Tuple
+from typing import Tuple, List
 from numbers import Number
+import warnings
 
 class UntilNode(FormulaNode):
 	def __init__(self) -> None:
 		super().__init__()
+		self.__useShortAlgorithm = True
+	
+	def useShortAlgorithm(self):
+		self.__useShortAlgorithm = True
 
-	def __shortAlgorithm(self, size: int, childResults: SignalList, a: float, b: float) -> Signal:
-		output: Signal = Signal()
+	def useLongAlgorithm(self):
+		self.__useShortAlgorithm = False
+
+	def shortAlgorithm(self, size: int, childResults: List[Signal], interval: Interval) -> Signal:
+		output: Signal = Signal("until")
+		print("Until input:")
+		print(f"\ta={interval.getLower()}")
+		print(f"\tb={interval.getUpper()}")
+		print(f"\tleftChild={childResults[0].oldFormat()}")
+		print(f"\trightChild={childResults[1].oldFormat()}")
+		print(size)
 		for i in range(size):
+			print('loop0')
 			t = childResults[1].getTime(i)
-			t_a = t + a
-			t_b = t + b
-			inter_2 = getSignalInterval(childResults[1], t_a, t_b)
+			print(f"t={t}")
+			print(f"a={interval.getLower()}")
+			print(f"b={interval.getUpper()}")
+			print(f"timeinterval={interval + t}")
+			inter_2 = childResults[1].getInterval(interval + t, half_open=False)
+			print(f"int2: {inter_2.oldFormat()}")
 			values = []
 			derivatives = []
 			for j in range(inter_2.getCheckpointCount()):
+				print('loop1')
 				k = inter_2.getTime(j)
-				inter_1 = getSignalInterval(childResults[0], t, k)
+				inter_1 = childResults[0].getInterval(Interval(t, k), half_open=False)
+				print(f"int1: {inter_1.oldFormat()}")
 				values.append(min(inter_2.getValue(j), min(inter_1.getValues())))
 				derivatives.append(min(inter_2.getDerivative(j), min(inter_1.getDerivatives())))
+			print("endloop1")
 			output.emplaceCheckpoint(t, max(values), max(derivatives))
+		print(f"endloop0: {output.oldFormat()}")
+		# if output.oldFormat() != [[0, 1, 2, 3, 4], [1, 1, 1, 1, -1], [0, 0, -2, -1, 0.0]]:
+		# 	exit(1)
 		for i in reversed(range(output.getCheckpointCount())):
-			if output.getTime(i) > childResults[0].getTime(-1) - b:
-				if output.getTime(i-1) < childResults[0].getTime(-1) - b:
-					output.popCheckpoint()
-					output.emplaceCheckpoint(childResults[0].getTime(-1) - b, getAffinePoint(output, childResults[0].getTime(-1) - b), output.getDerivative(-2))
-				else:
-					output.popCheckpoint()
+			print("loop2")
+			updatedLastTime = childResults[0].getTime(-1) - interval.getUpper()
+			if output.getTime(i) > updatedLastTime:
+				print('if1')
+				sv = output.popCheckpoint()
+				if sv.getTime() < updatedLastTime:
+					print('if2')
+					output.emplaceCheckpoint(updatedLastTime, output.getAffinePoint(updatedLastTime), output.getDerivative(-2))
+		print('endloop2')
+		#print(f"Until result=\n\t[{output.getTimes()}, {output.getValues()}, {output.getDerivatives()}]")
+		# warnings.warn("We haven't implemented correct derivatives computation in the short algorithm. Source implementation also doesn't really handle that case at all.")
+		# raise NotImplementedError("ShortAlgorithm derivative handling is incomplete (also I don't know if that matters at all")
+		output.recomputeDerivatives()
 		return output
 
 	# TODO: Any reason we can't just merge computeAnd/computeOr?
@@ -39,12 +70,14 @@ class UntilNode(FormulaNode):
 	# Do we need to run that twice?
 	def __computeAnd(self, x, y):
 		#x, y = getPunctualIntersection(x, y)
-		return calculate_and_or(x, y)
+		return calculate_and_or(x, y, 'and')
 
 	def __computeOr(self, x, y):
 		#x, y = getPunctualIntersection(x, y)
 		return calculate_and_or(x, y, 'or')
 
+
+	# TODO: This should be an operation on Signal.
 	def __shift(self, y, v):
 		# y - v
 		# Drop all where y - v < 0
@@ -112,7 +145,7 @@ class UntilNode(FormulaNode):
 					computed_or = y
 				else:
 					yt_minM = getAffinePoint(x, min(M))
-					y_s_t = getSignalInterval(y, s, t)
+					y_s_t = getSignalInterval(y, Interval(s, t))
 					y_constant = [y[0], [yt_minM] * len(y[0]), [0] * len(y[0])]
 					computed_or = calculate_and_or(y_s_t, y_constant, 'or')
 				print(computed_or)
@@ -137,9 +170,11 @@ class UntilNode(FormulaNode):
 				i += 1
 		return z
 
-	def __longAlgorithm(self, size: int, childResults: SignalList, lowerBound: float, upperBound: float):
+	def longAlgorithm(self, size: int, childResults: SignalList, interval: Interval) -> Signal:
+		lowerBound = interval.getLower()
+		upperBound = interval.getUpper()
 		# Begin algorithm for until
-		output = Signal()
+		output = Signal("until")
 		z_0 = [childResults[1][0], [0] * size, [0] * size]
 		i = len(childResults[0][0]) - 2  # Has to be 2, not 1 because we use an  extra +1 in the intervals
 		# Because the algorithm doesn't include the last value, we act as if we don't have a half open interval in python
@@ -186,25 +221,26 @@ class UntilNode(FormulaNode):
 	def quantitativeValidate(self, signals: SignalList, plot: bool=False) -> Signal:
 		# Check if one or two formula nodes as children, if one -> add true signal
 		if len(self.children) == 4:
-			childResults: SignalList = SignalList([self.children[0].quantitativeValidate(signals, plot), self.children[-1].quantitativeValidate(signals, plot)])
+			childResults: SignalList = SignalList([self.children[0].quantitativeValidate(signals, plot), self.children[3].quantitativeValidate(signals, plot)])
 			childResults = getPunctualIntersection(childResults[0], childResults[1], 'quantitative')
 		else:
-			childResult: Signal = self.children[0].quantitativeValidate(signals, plot)
+			# Eventually: EVENTUALLY[a, b] <SIGNAL>: a = children[0]/[-3], b = [1]/[-2], signal = [2]/[-1]
+			# This is the 'eventually' operation == '<TRUE> Until[a,b] <signal>'
+			assert len(self.children) == 3
+			childResult: Signal = self.children[2].quantitativeValidate(signals, plot)
 			dummySignal: Signal = Signal("DummyTrueSignal", childResult.getTimes(), [1] * childResult.getCheckpointCount(), [0] * childResult.getCheckpointCount())
-			childResults: SignalList = SignalList([childResult, dummySignal])
+			childResults: SignalList = SignalList([dummySignal, childResult])
 
-		# Get the size for which all needed data is present
-		# TODO: Wtf does that mean? ^
 		size = childResults[0].getCheckpointCount()
 		# Get the interval limit values for the interval [a, b]
-		assert isinstance(self.children[-2], ValueNode) and isinstance(self.children[-3], ValueNode), "these children HAVE to be ValueNodes - else we can't uniquely determine the value to pass to interval."
-		aSignal, bSignal = self.children[-3].quantitativeValidate(signals, plot), self.children[-2].quantitativeValidate(signals, plot)
+		aSignal: Signal = self.children[-3].quantitativeValidate(signals, plot)
+		bSignal: Signal = self.children[-2].quantitativeValidate(signals, plot)
+		assert aSignal.getCheckpointCount() == bSignal.getCheckpointCount() == 1, f"Ambiguous interval sizes. These should be from ValueNodes, which return a single-value Signal."
 		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
-		short_algo = True
-		if short_algo:
-			until = self.__shortAlgorithm(size, childResults, interval.getLower(), interval.getUpper())
+		if self.__useShortAlgorithm:
+			until = self.shortAlgorithm(size, childResults, interval)
 		else:
-			until = self.__longAlgorithm(size, childResults, interval.getLower(), interval.getUpper())
+			until = self.longAlgorithm(size, childResults, interval)
 		if plot:
 			self.quantitativePlot(until)
 		return until
@@ -212,29 +248,28 @@ class UntilNode(FormulaNode):
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
 		# Operator can be unary or binary;
 		# Children are 2 integers from the time interval, plus one or two formulas.
-		childResults: SignalList = SignalList([self.children[-1].booleanValidate(signals, plot)])
-		if len(self.children) == 3:
-			dummyTrueSignal = Signal("dummytrue", childResults[0].getTimes(), [1] * childResults[0].getCheckpointCount(), [0] * childResults[0].getCheckpointCount())
-			childResults.insert(0, dummyTrueSignal)
-		else:
-			childResults.insert(0, self.children[0].booleanValidate(signals, plot))
+		if len(self.children) == 4:
+			childResults: SignalList = SignalList([self.children[0].booleanValidate(signals, plot), self.children[3].booleanValidate(signals, plot)])
 			childResults = getPunctualIntersection(childResults[0], childResults[1], 'boolean')
-		# Get the size for which all needed data is present
+		else:
+			assert len(self.children) == 3
+			childResult: BooleanSignal = self.children[2].booleanValidate(signals, plot)
+			dummySignal: BooleanSignal = BooleanSignal("DummyTrueSignal", childResult.getTimes(), [1] * childResult.getCheckpointCount(), [0] * childResult.getCheckpointCount())
+			childResults: SignalList = SignalList([dummySignal, childResult])
 		size = childResults[0].getCheckpointCount()
-		# Get the values
-		assert isinstance(self.children[-3], ValueNode) and isinstance(self.children[-2], ValueNode)
 		
 		aSignal: BooleanSignal = self.children[-3].booleanValidate(signals, plot)
 		bSignal: BooleanSignal = self.children[-2].booleanValidate(signals, plot)
-		a, b = aSignal.getValue(0), bSignal.getValue(0)
-		assert isinstance(a, Number)
-		assert isinstance(b, Number)
-		until = self.__booleanValidation(size, childResults, b, a)
+		assert aSignal.getCheckpointCount() == bSignal.getCheckpointCount() == 1, f"Ambiguous interval sizes. These should be from ValueNodes, which return a single-value Signal."
+		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
+		until = self.booleanValidationImplementation(size, childResults, interval)
 		if plot:
 			self.plot(until)
 		return until
 
-	def __booleanValidation(self, size: int, childResults: SignalList, b, a):
+	def booleanValidationImplementation(self, size: int, childResults: SignalList, interval: Interval):
+		a = interval.getLower()
+		b = interval.getUpper()
 		# Get the true intervals of the signals
 		intervals_1, intervals_2 = [], []
 		temp_1, temp_2 = [], []
@@ -279,15 +314,14 @@ class UntilNode(FormulaNode):
 					if intersection:
 						intervals_until.append(intersection)
 		# Calculate the entire until, make the intervals true in the until
-
-		until = Signal("untilbooleanvalidate", childResults[1].getTimes(), [0] * size)
+		until = BooleanSignal("until", childResults[1].getTimes(), [0] * size)
 		for interval in intervals_until:
 			for timestamp in interval:
 				if timestamp in until.getTimes():
 					timestampIndex = until.getTimes().index(timestamp)
 					until.getCheckpoint(timestampIndex).setValue(1)
 				else:
-					until.addCheckpoint(SignalValue(timestamp, 1))
+					until.emplaceCheckpoint(timestamp, 1)
 			intervalStartIndex = until.getTimes().index(interval[0])
 			intervalEndIndex = until.getTimes().index(interval[1])
 			for i in range(intervalStartIndex, intervalEndIndex):
@@ -303,8 +337,8 @@ class UntilNode(FormulaNode):
 					# No extra sorting happens in the SortedList after this change - which may cause problems.
 					# The asserts wrapping this code ensure no unexpected consequences propagate 
 					assert until.getTimes() == sorted(until.getTimes()), "Time was unsorted prior to time modification."
-					until.getCheckpoint(-1).setTime(childResults[0].getTime(-1) - b)
-					until.getCheckpoint(-1).setValue(until.getValue(-2))
+					poppedPoint: SignalValue = until.popCheckpoint()
+					until.emplaceCheckpoint(childResults[0].getTime(-1) - b, poppedPoint.getValue(), poppedPoint.getDerivative())
 					assert until.getTimes() == sorted(until.getTimes()), "Time modification created an issue."
 				else:
 					until.popCheckpoint()

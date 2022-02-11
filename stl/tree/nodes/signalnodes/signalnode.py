@@ -13,10 +13,22 @@ class SignalNode(Node):
 		self.signalName = str(token)
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		return signals.getByName(self.signalName)
+		signal = signals.getByName(self.signalName)
+		if type(signal) != BooleanSignal:
+			# Should be only other option
+			assert type(signal) == Signal
+			signal = BooleanSignal.fromSignal(signal)
+		return signal
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
-		return signals.getByName(self.signalName)
+		signal = signals.getByName(self.signalName)
+		if type(signal) != Signal:
+			# Should be only other option
+			assert type(signal) == BooleanSignal
+			signal = Signal.fromBooleanSignal(signal)
+			# The boolean signal doesn't use derivatives, so we must initialize them in the quantitative signal
+			signal.recomputeDerivatives() 
+		return signal
 
 	def text(self) -> str:
 		return 'Signal: ' + self.signalName

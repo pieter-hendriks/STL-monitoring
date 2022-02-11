@@ -4,3 +4,18 @@ AbsoluteValueNode:
 	Assume this signal is passed through an absolute value node, then the signal becomes, in essence, a constant. Should the derivatives be updated to reflect that?
 		Laurens' code did not do this. Mine does currently.
 		Unsure if code requiring derivatives computes them as needed.
+
+QuantitativeSignalNode:
+	Looks like it is unused? Keeping it in for now, but both evaluation functions currently simply throw.
+	Why is there no requirement for semantic==quantitative?
+	In what context does a Boolean-semantic QuantitativeSignalNode make sense?
+
+BooleanFilterNode:
+	Rename to ComparisonOperatorNode?
+	Seems to convey much more clearly what the node actually is. 
+	Comments can specify that the resulting Signal will be Boolean-valued.
+
+AndNode:
+	Testing this is essentially identical to testing the calculate_and_or function, with parameter 'and'.
+	However, there's no OrNode (because it gets replaced by 'not and(not a, not b)' during parsing)
+	Does any part of the code use the or computation part of calculate_and_or? If no, wouldn't it make more sense to eliminate that function?

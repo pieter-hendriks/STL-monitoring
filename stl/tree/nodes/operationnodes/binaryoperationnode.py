@@ -39,6 +39,7 @@ class BinaryOperationNode(OperationNode):
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
 		childResults = getPunctualIntersection(self.children[0].booleanValidate(signals, plot), self.children[1].booleanValidate(signals, plot))
+		assert type(childResults[0]) == BooleanSignal
 		return self.__operationImplementation(childResults[0], childResults[1])
 		
 	def __operationImplementation(self, leftChildSignal: Union[Signal, BooleanSignal], rightChildSignal: Union[Signal, BooleanSignal]) -> Union[Signal, BooleanSignal]:

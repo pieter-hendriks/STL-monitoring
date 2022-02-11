@@ -15,9 +15,9 @@ class SignalNodeTest(unittest.TestCase):
 		node.processToken('notfound')
 		# In case of signal with specified name not in list, we expect a runtime failure
 		# TODO: Determine if more appropriate (non-failing) error handling is desired. This suffices for now, though.
-		with self.assertRaisesRegex(RuntimeError, "Signal with name '.*' not found."):
+		with self.assertRaisesRegex(RuntimeError, "Signal with name 'notfound' not found."):
 				node.booleanValidate(SignalList(), None)
-		with self.assertRaisesRegex(RuntimeError, "Signal with name '.*' not found."):
+		with self.assertRaisesRegex(RuntimeError, "Signal with name 'notfound' not found."):
 				node.quantitativeValidate(SignalList(), None)
 	
 	def testEmptySignal(self):
@@ -26,8 +26,11 @@ class SignalNodeTest(unittest.TestCase):
 		node.processToken("empty")
 		# Test both Boolean and Non-Boolean empty signals. 
 		for emptySignal in [BooleanSignal("empty"), Signal("empty")]:
-			self.assertEqual(emptySignal, node.booleanValidate(SignalList([emptySignal]), None))
-			self.assertEqual(emptySignal, node.quantitativeValidate(SignalList([emptySignal]), None))
+			# Boolean validation should return boolean empty signal no matter what input
+			self.assertEqual(BooleanSignal("empty"), node.booleanValidate(SignalList([emptySignal]), None))
+			# Quant validation should return quant empty signal no matter what input
+			self.assertEqual(Signal("empty"), node.quantitativeValidate(SignalList([emptySignal]), None))
+		self.assertNotEqual(BooleanSignal("empty"), Signal("empty"))
 
 	def testBooleanSignal(self):
 		# Create node to test
@@ -35,11 +38,10 @@ class SignalNodeTest(unittest.TestCase):
 		node.processToken("cos")
 		# Create signal to test with
 		cosSignal = getCosSignal(10, name='cos', booleanSignal = True)
-		if cosSignal.getName() != 'cos':
-			raise RuntimeError("FUCK")
 		# The returned signal must be equal to the signal we created as input
 		self.assertEqual(cosSignal, node.booleanValidate(SignalList([cosSignal]), None))
-		self.assertEqual(cosSignal, node.quantitativeValidate(SignalList([cosSignal]), None))
+		# Type conversion must applied when necessary
+		self.assertEqual(Signal.fromBooleanSignal(cosSignal), node.quantitativeValidate(SignalList([cosSignal]), None))
 
 
 	def testNonBooleanSignal(self):
@@ -51,8 +53,9 @@ class SignalNodeTest(unittest.TestCase):
 		if cosSignal.getName() != 'cos':
 			raise RuntimeError(f"{cosSignal.getName()}")
 		# The returned signal must be equal to the signal we created as input
-		self.assertEqual(cosSignal, node.booleanValidate(SignalList([cosSignal]), None))
 		self.assertEqual(cosSignal, node.quantitativeValidate(SignalList([cosSignal]), None))
+		# And booleanized version thereof in case of boolean evaluation
+		self.assertEqual(BooleanSignal.fromSignal(cosSignal), node.booleanValidate(SignalList([cosSignal]), None))
 
 
 

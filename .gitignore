@@ -6,3 +6,4 @@ scratches/
 *.jar
 *.jar.old
 .vscode/
+.coverage

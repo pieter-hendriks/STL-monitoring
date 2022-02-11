@@ -1,4 +1,4 @@
-from .operationnode import BinaryOperationNode
+from .binaryoperationnode import BinaryOperationNode
 from ....stlUtils import getPunctualIntersection
 from numbers import Number
 from ....stlUtils import getPunctualIntersection

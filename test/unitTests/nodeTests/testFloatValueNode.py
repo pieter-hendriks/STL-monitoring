@@ -16,7 +16,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testFractionalZeroValue(self):
@@ -29,7 +28,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testNegativeFractionalZeroValue(self):
@@ -42,7 +40,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testZeroValue(self):
@@ -55,7 +52,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testWholePositiveValue(self):
@@ -68,7 +64,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [123], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [1], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testFractionalPositiveValue(self):
@@ -81,7 +76,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [123.456], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [1], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testWholeNegativeValue(self):
@@ -94,7 +88,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [-123], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 	def testFractionalNegativeValue(self):
@@ -107,7 +100,6 @@ class FloatValueNodeTest(unittest.TestCase):
 		# Create expected result and compare the two
 		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [-123.456], [0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
-		expectedSignal = BooleanSignal("BooleanValueNodeSignal", [0], [0], [0])
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
 

@@ -1,2 +1,4 @@
-from .signal import Signal, SignalList, BooleanSignal
+from .signal import Signal
+from .signallist import SignalList
+from .booleansignal import BooleanSignal
 from .signalvalue import SignalValue

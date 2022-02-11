@@ -1,95 +1,10 @@
 import numpy
 from .signals import Signal, BooleanSignal, SignalList
-from .utility import line_intersection
 import math
 from typing import Tuple, Union
 import warnings
+from .utility import Interval
 
-# Get the value of a signal at time step t
-def getAffinePoint(signal: Signal, t: float) -> float:
-	# TODO: Replace this with an operation on Signal class
-	if t > signal.getLargestTime():
-		# Compute using derivative if it falls outside of known values
-		return signal.getValue(-1) + signal.getDerivative(-1) * (t - signal.getTime(-1))
-	i = 0
-	# If it's within known values, find the correct time step
-	while signal.getTime(i) < t:
-		i += 1
-	if i == 0 or signal.getTime(i) == t:
-		# If point before signal started, return first data point
-		# If it's an exact data point in the signal, return corresponding value
-		return signal.getValue(i)
-	elif i >= signal.getCheckpointCount():
-		# If it's after the end of signal, return last data point
-		return signal.getValue(-1)
-	else:
-		# If it's somewhere between two data points, interpolate
-		value = signal.getValue(i - 1)
-		value += (signal.getValue(i) - signal.getValue(i-1)) / ((signal.getTime(i) - signal.getTime(i-1)) * t - signal.getTime(i-1))
-		return value
-
-# Get a derivative of the signal at time step t
-def getAffineDerivative(signal: Signal, t: float):
-	# TODO: Replace this with an operation on Signal class
-	if t < signal.getTime(0):
-		return 0
-	for i in range(signal.getCheckpointCount()):
-		if t < signal.getTime(i):
-			# Signal is linearly interpolated between points, so derivative is constant on the interval [i-1, i)
-			return signal.getDerivative(i-1)
-
-
-# Get an interval of a signal between time steps a and b
-# If half open, the last value of time step b will not be included
-def getSignalInterval(signal: Signal, a: float, b: float, half_open: bool=False) -> Signal:
-	# TODO: Replace this with an operation on Signal class
-	constructedSignalName = f"SignalInterval(<{signal.getName()}>, {a}, {b}, {half_open})"
-	if a > signal.getTime(-1):
-		return Signal(constructedSignalName, [a, b+1], [signal.getValue(-1)]*2, [0, 0])
-	elif b < signal.getTime(0):
-		return Signal(constructedSignalName, [a, b+1], [signal.getValue(0)]*2, [0, 0])
-	
-	# Find the first value of the signal that is in the interval
-	x = signal.getSmallestTimeAfter(a)
-
-	# If the interval is [a, a]
-	if a == b:
-		if half_open:
-			# In case of half open, that's an empty interval
-			warnings.warn("Returning empty signal in getSignalInterval")
-			return Signal()
-		else:
-			# If closed, we should get one value at time a
-			warnings.warn("Dropped some derivative code here, verify that the functionality is correct.")
-
-			# if signal[0].index(x) == 0:
-			# 	derivative = 0
-			# else:
-			# 	derivative = signal[2][signal[0].index(x) - 1]
-			return Signal(constructedSignalName, [a], [getAffinePoint(signal, a)], [0])
-	# Search the last value of the signal that is in the interval
-	# Inclusive if the interval is closed
-	y = signal.getLargestTimeBefore(b, not half_open)
-	# Now, [x, y] is the interval in signal checkpoints, with x >= a and y <= b.
-	result = Signal()
-	# Do this separately since Signal only allows construction in ascending order of time
-	if x > a:
-		# We dropped part of the interval here, because we don't have an exact checkpoint. Compute best estimate.
-		result.emplaceCheckpoint(a, getAffinePoint(signal, a), numpy.diff([signal.getValue(0), signal.getValue(1)]) / numpy.diff([signal.getTime(0), signal.getTime(1)]))
-	else:
-		# Handle the case where we had an exact checkpoint
-		assert x == a, "x < a should be impossible through program logic."
-		result.addCheckpoint(signal.getCheckpoint(signal.getIndexForTime(x)))
-	for signalvalue in signal.getSubset(x, y):
-		result.addCheckpoint(signalvalue)
-	if y < b:
-		result.emplaceCheckpoint(b, getAffinePoint(signal, b), numpy.diff([signal.getValue(-2), signal.getValue(-1)] / numpy.diff([signal.getTime(-2), signal.getTime(-1)])))
-	else:
-		assert y == b, "y > b should be impossible through program logic."
-		if not half_open:
-			# If it's half open, the limit value should be excluded
-			result.addCheckpoint(signal.getCheckpoint(signal.getIndexForTime(b)))
-	return result
 
 def getPunctualIntersection(s1: Signal, s2: Signal, semantic='quantitative') -> SignalList:
 	# TODO: Replace this with an operation on Signal class
@@ -97,11 +12,14 @@ def getPunctualIntersection(s1: Signal, s2: Signal, semantic='quantitative') -> 
 	# print(f"COMPUTING {semantic} PUNCT INTERSECT; parameters = ")
 	# for i in [s1, s2]:
 	# 	print(f"\t{i}")
+	assert type(s1) == type(s2), "Operation is unsupported between signals of different semantics."
+	signalType = type(s1)
 	if s1.getCheckpointCount() == 0 or s2.getCheckpointCount() == 0:
 		# print(s1)
 		# print(s2)
 		# print("PunctualIntersect short-circuit to empty signal")
-		return [Signal(), Signal()]
+
+		return [signalType(), signalType()]
 
 	i_1 = 0
 	i_2 = 0
@@ -118,7 +36,7 @@ def getPunctualIntersection(s1: Signal, s2: Signal, semantic='quantitative') -> 
 	while i_2 < len(s2.getTimes()) and s2.getTime(i_2) < start:
 		i_2 += 1
 
-	temp_1, temp_2 = Signal(), Signal()
+	temp_1, temp_2 = signalType(), signalType()
 
 	# TODO: shouldn't this and the addition at the end be skipped? -> what isn't know, isn't know
 	# Add the values at the time steps till start
@@ -200,45 +118,38 @@ def getBooleanIntersection(a: Signal, b: Signal) -> Union[bool, Signal]:
 
 # x and y are signals in the form of [t, x, dx]
 # operator is one of the following: 'and' or 'or'
-def calculate_and_or(x, y, operator='and'):
+def calculate_and_or(x: Signal, y: Signal, operator='and') -> Signal:
+	if operator == 'and':
+		operation = lambda x, y: x < y
+	elif operator == 'or':
+		operation = lambda x, y: x > y
+	else:
+		raise NotImplementedError(f"calculate_and_or not implemented for operation '{operator}'")
 	# TODO: Replace this with an operation on Signal class
 	# print(f"CALCULATE {operator} (and_or), PARAMETERS:")
 	# for i in [x, y]:
 	# 	print(f"\t{i}")
 	# print(f"PUNCTUAL INTERSECT RESULT: {getPunctualIntersection(x, y)}")
 	x, y = getPunctualIntersection(x, y)
-	OPERATORS = {'or': lambda x, y: x > y, 'and': lambda x, y: x < y}
-	temp = Signal()
+	result = Signal(operator)
 	last = None  # Indicating which signal had the last max/min
 	for i in range(x.getCheckpointCount()):
 		if x.getValue(i) == y.getValue(i):
 			last = None
-			temp.addCheckpoint(x.getCheckpoint(i))
-			temp[0].append(x[0][i])
-			temp[1].append(x[1][i])
-			temp[2].append(x[2][i])
-		elif OPERATORS[operator](x[1][i], y[1][i]):
+			result.addCheckpoint(x.getCheckpoint(i))
+		elif operation(x.getValue(i), y.getValue(i)):
 			if last == 'y':
-				inter = line_intersection(
-				    [[x[0][i - 1], x[1][i - 1]], [x[0][i], x[1][i]]], [[y[0][i - 1], y[1][i - 1]], [y[0][i], y[1][i]]]
-				)
-				temp[0].append(inter[0])
-				temp[1].append(inter[1])
-				temp[2].append(x[2][i - 1])
+				intersectionTime, intersectionValue = x.intersectAtIndex(y, i)
+				# We compute by continuing at current derivative, so the derivative remains equal to the previous entry
+				result.emplaceCheckpoint(intersectionTime, intersectionValue, x.getDerivative(i-1))
 			last = 'x'
-			temp[0].append(x[0][i])
-			temp[1].append(x[1][i])
-			temp[2].append(x[2][i])
-		elif OPERATORS[operator](y[1][i], x[1][i]):
+			result.addCheckpoint(x.getCheckpoint(i))
+		else:
+		#elif operation(y.getValue(i), x.getValue(i)):
 			if last == 'x':
-				inter = line_intersection(
-				    [[x[0][i - 1], x[1][i - 1]], [x[0][i], x[1][i]]], [[y[0][i - 1], y[1][i - 1]], [y[0][i], y[1][i]]]
-				)
-				temp[0].append(inter[0])
-				temp[1].append(inter[1])
-				temp[2].append(y[2][i - 1])
+				intersectionTime, intersectionValue = y.intersectAtIndex(x, i)
+				# We compute by continuing at current derivative, so the derivative remains equal to the previous entry
+				result.emplaceCheckpoint(intersectionTime, intersectionValue, y.getDerivative(i-1))
 			last = 'y'
-			temp[0].append(y[0][i])
-			temp[1].append(y[1][i])
-			temp[2].append(y[2][i])
-	return temp
+			result.addCheckpoint(y.getCheckpoint(i))
+	return result
