@@ -15,7 +15,7 @@ class UntilNodeSetup(unittest.TestCase):
 		self.intervalUpperBoundChild: mock.Mock = mock.Mock()
 		self.rightSignalChild: mock.Mock = mock.Mock()
 		self.node.children = [self.leftSignalChild, self.intervalLowerBoundChild, self.intervalUpperBoundChild, self.rightSignalChild]
-	
+
 	def setInputSignals(self, s1: Signal, s2: Signal):
 		self.leftSignalChild.quantitativeValidate.return_value = s1
 		self.leftSignalChild.booleanValidate.return_value = s1
@@ -53,25 +53,21 @@ class UntilNodeTest(UntilNodeSetup):
 		# return
 		self.node.useShortAlgorithm()
 		self.__runQuantitativeUntilComplexTestCases()
-		
+
 	def testComplexLongQuantitativeUntil(self):
 		warnings.warn("Complex long test disabled!")
-		return 
+		return
 		self.node.useLongAlgorithm()
 		self.__runQuantitativeUntilComplexTestCases()
-	
-	def testSimpleSignalShortAlgorithm(self):
-		# warnings.warn("simple test disabled")
-		# return
-		self.node.useShortAlgorithm()
+
+	def __simpleSignalTestHelper(self):
 		simpleSignal = Signal('test', [0, 1], [0, 1], [1, 0])
 		self.setInputSignals(simpleSignal, simpleSignal)
 		self.setInterval(0, 1)
 		expectedResult = Signal('until', [0], [0], [0])
 		self.assertEqual(expectedResult, self.node.quantitativeValidate(None, None))
 
-	def testSmallSignalShortAlgorithm(self):
-		self.node.useShortAlgorithm()
+	def __smallSignalTestHelper(self):
 		left = Signal('test', [0, 1, 2, 3, 4], [2, 7, 5, 4, -1], [5, -2, -1, -3, 0])
 		right = Signal('test', [0, 1, 2, 3, 4], [-1, -1, -1, 1, 1], [0, 0, 2, 0, 0])
 		self.setInputSignals(left, right)
@@ -83,6 +79,26 @@ class UntilNodeTest(UntilNodeSetup):
 		result = self.node.quantitativeValidate(None, None)
 		expectedResult = Signal('until', [0, 1, 2], [-1, 1, 1], [2, 0, 0])
 		self.assertEqual(expectedResult, result)
+
+
+	def testSimpleSignalShortAlgorithm(self):
+		# warnings.warn("simple test disabled")
+		# return
+		self.node.useShortAlgorithm()
+		self.__simpleSignalTestHelper()
+
+	def testSmallSignalShortAlgorithm(self):
+		self.node.useShortAlgorithm()
+		self.__smallSignalTestHelper()
+
+	def testSimpleSignalLongAlgorithm(self):
+		self.node.useLongAlgorithm()
+		self.__simpleSignalTestHelper()
+
+	def testSmallSignalLongAlgorithm(self):
+		self.node.useLongAlgorithm()
+		self.__smallSignalTestHelper()
+
 
 
 
