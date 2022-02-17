@@ -1,6 +1,5 @@
 from turtle import left
 from .operationnode import OperationNode
-from ....stlUtils import getPunctualIntersection
 from ....signals import SignalList, Signal, BooleanSignal
 from typing import Union
 
@@ -34,11 +33,11 @@ class BinaryOperationNode(OperationNode):
 		return self.operatorName
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
-		childResults = getPunctualIntersection(self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot))
+		childResults = SignalList(Signal.computeComparableSignals(self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)))
 		return self.__operationImplementation(childResults[0], childResults[1])
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		childResults = getPunctualIntersection(self.children[0].booleanValidate(signals, plot), self.children[1].booleanValidate(signals, plot))
+		childResults = SignalList(Signal.computeComparableSignals(self.children[0].booleanValidate(signals, plot), self.children[1].booleanValidate(signals, plot)))
 		assert type(childResults[0]) == BooleanSignal
 		return self.__operationImplementation(childResults[0], childResults[1])
 		

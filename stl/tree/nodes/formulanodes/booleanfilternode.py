@@ -1,6 +1,5 @@
 
 from .formulanode import FormulaNode
-from stl.stlUtils import getPunctualIntersection
 from numbers import Number
 import warnings
 import numpy
@@ -29,7 +28,7 @@ class BooleanFilterNode(FormulaNode):
 		lhs, rhs = self.children[0].booleanValidate(signals, plot), self.children[1].booleanValidate(signals, plot)
 		result: BooleanSignal = BooleanSignal('comparison')
 		assert type(lhs) == type(rhs) == BooleanSignal, "Input the boolean validate should always be BooleanSignal instances."
-		lhs, rhs = getPunctualIntersection(lhs, rhs, 'boolean')
+		lhs, rhs = Signal.computeComparableSignals(lhs, rhs)
 		for i in range(lhs.getCheckpointCount()):
 			comparisonResult = self.operation(lhs.getValue(i), rhs.getValue(i))
 			result.emplaceCheckpoint(lhs.getTime(i), comparisonResult)
@@ -41,7 +40,7 @@ class BooleanFilterNode(FormulaNode):
 		lhs, rhs = self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)
 		result: Signal = Signal('comparison')
 		assert type(lhs) == type(rhs) == Signal
-		lhs, rhs = getPunctualIntersection(lhs, rhs, 'quantitative')
+		lhs, rhs = Signal.computeComparableSignals(lhs, rhs)
 		for i in range(lhs.getCheckpointCount()):
 			comparisonResult = self.operation(lhs.getValue(i), rhs.getValue(i))
 			result.emplaceCheckpoint(lhs.getTime(i), comparisonResult, None)

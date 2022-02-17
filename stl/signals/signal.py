@@ -1,19 +1,16 @@
 from .signalvalue import SignalValue
 import pandas as pd
-from typing import List, Tuple
+from typing import List, Tuple, Callable
 import warnings
-import numpy
 from sortedcontainers import SortedList
-from ..utility import binarySearch
-from ..utility import Interval
-
+from ..utility import Interval, LineSegment, Point
 
 # TODO: Maybe replace checkpoints with list of times + dict[Time -> Value, Derivative]
 class Signal:
 	# A class for managing SignalValues
 	# A signal is specified as a list of time/value pairs (with optional derivative)
 	# The getValue function returns the value specified, at the largest timestamp <= the requested time
-	def __init__(self, name: str = None, times: List[float] = None, values: List[float] = None, derivatives: List[float] = None):
+	def __init__(self, name: str = None, times: List[float] = None, values: List[float] = None, derivatives: List[float] = None, constant: bool = False):
 		if name is not None and type(name) != str:
 			raise RuntimeError(f"Name argument is {type(name)} (value = {name}) instead of str")
 		if all([name is None, times is None, values is None, derivatives is None]):
@@ -36,9 +33,17 @@ class Signal:
 			if derivatives is None:
 				derivatives = []
 			self.checkpoints: SortedList[SignalValue] = SortedList([SignalValue(x, y, d) for x, y, d in zip(times, values, derivatives)], key = lambda x: x.getTime())
+		self.constant = constant
 	
 	@classmethod
-	def fromBooleanSignal(cls, s: 'BooleanSignal'): # type: ignore  (Necessary because pylance doesn't support this annotation)
+	def createConstant(cls, name: str, value: float) -> 'Signal':
+		""" Create a constant Signal. """
+		s = cls(name, [0], [value], [0], constant=True)
+		return s
+
+	@classmethod
+	def fromBooleanSignal(cls, s: 'BooleanSignal') -> 'Signal': # type: ignore  (Necessary because pylance doesn't support this 'BooleanSignal' annotation)
+		""" Conversion from a Boolean Signal. """
 		if not s.checkpoints:
 			return cls(s.getName())
 		times, values, derivatives = zip(*[(cp.getTime(), cp.getValue(), cp.getDerivative()) for cp in s.checkpoints])
@@ -47,109 +52,100 @@ class Signal:
 		newSignal.recomputeDerivatives()
 		return newSignal
 
+	@classmethod
+	def fromCheckpoints(cls, name: str, checkpoints: List[SignalValue]) -> 'Signal':
+		""" Constructs a Signal instance from a list of checkpoints. Useful for copying. """
+		s = cls(name)
+		s.checkpoints = SortedList(checkpoints, key=lambda x: x.getTime())
+		return s
+
 	def getInterval(self, interval: Interval, half_open: bool = False) -> 'Signal':
-		# Get an interval of a signal between time steps a and b
-		# If half open, the last value of time step b will not be included
+		""" Find the part of the signal that fits within the specified interval (endpoint inclusion based on value of 'half_open') """
 		constructedSignalName = f"{self.getName()}_interval"
-		if interval.getLower() > self.getTime(-1):
-			return Signal(constructedSignalName, [interval.getLower(), interval.getUpper()+1], [self.getValue(-1)]*2, [0, 0])
-		warnings.warn("Dropped upper() < time check")
-		# elif interval.getUpper() < self.getTime(0):
-		# 	return Signal(constructedSignalName, [interval.getLower(), interval.getUpper()+1], [self.getValue(0)]*2, [0, 0])
-		# Find the first value of the signal that is in the interval
-		x = self.getSmallestTimeAfter(interval.getLower())
-		# If the interval is [a, a]
-		if interval.getLower() == interval.getUpper():
-			if half_open:
-				# In case of half open, that's an empty interval
-				warnings.warn("Returning empty signal in getSignalInterval")
-				return Signal(constructedSignalName)
-			else:
-				# If closed, we should get one value at time interval.getLower()
-				warnings.warn("Dropped some derivative code here, verify that the functionality is correct.")
-				#TODO: Ensure above warning doesn't apply. Derivative is currently [0] everywhere on last element.
-				# Not sure what computation in original implementation was for (see below.)
-				
-				# if signal[0].index(x) == 0:
-				# 	derivative = 0
-				# else:
-				# 	derivative = signal[2][signal[0].index(x) - 1]
-				return Signal(constructedSignalName, [interval.getLower()], [self.getAffinePoint(interval.getLower())], [0])
-		# Search the last value of the signal that is in the interval
-		# Inclusive if the interval is closed
-		y = self.getLargestTimeBefore(interval.getUpper(), not half_open) 
-		# Now, [x, y] is the interval in signal checkpoints, with x >= a and y <= b.
-		result = Signal(constructedSignalName)
-		# Do this separately since Signal only allows construction in ascending order of time
-		if x > interval.getLower():
-			# We dropped part of the interval here, because we don't have an exact checkpoint. Compute best estimate.
-			result.emplaceCheckpoint(interval.getLower(), self.getAffinePoint(interval.getLower()), numpy.diff([self.getValue(0), self.getValue(1)]) / numpy.diff([self.getTime(0), self.getTime(1)]))
-		# if x == interval.getLower(), it'll be included in getSubset so we don't have to worry about else clause
+		output: Signal = Signal(constructedSignalName)
+		# Handle cases where lower bound is larger or equal to biggest values in the Signal.
+		if interval.getLower() > self.getLargestTime():
+			return output
+		elif interval.getLower() == self.getLargestTime():
+			output.addCheckpoint(self.checkpoints[-1])
+			return output
+		# Consider trivial interval case:
+		if interval.getUpper() == interval.getLower():
+			if not half_open:
+				output.addCheckpoint(self.getAffineCheckpoint(interval.getLower()))
+			return output
+		# A valid index in the Signal, where timestamp is as close as possible to (but never smaller than) the lower bound of the interval
+		lowerBoundIndex = self.getIndexForSmallestTimeAfter(interval.getLower(), inclusive=True)
+		# A valid index in the Signal, where timestamp is as close as possible to (but never larger than or equal to) the upper bound of the interval
+		upperBoundIndex = self.getIndexForLargestTimeBefore(interval.getUpper(), not half_open)
 
-		# Our computation of y already includes the half-open property, so here we can just always have a half-open interval
-		for signalvalue in self.getSubset(x, y, False): 
-			result.addCheckpoint(signalvalue)
-		# if y == interval.getUpper() (and it should be included), it'll be included by the subset.
-		# half_open in this case doesn't really do much - it only makes it so the last checkpoint of signal isn't considered if it's exactly equal. 
-		# TODO: Is half_open not applying when timestamp not in signal intentional?
-		if y < interval.getUpper():
-			result.emplaceCheckpoint(interval.getUpper(), self.getAffinePoint(interval.getUpper()), numpy.diff([self.getValue(-2), self.getValue(-1)] / numpy.diff([self.getTime(-2), self.getTime(-1)])))
+		# Get the output Signal. It might be missing up to two values still: one at interval.getLower() and one at interval.getUpper()
+		output = Signal.fromCheckpoints(constructedSignalName, self.checkpoints[lowerBoundIndex: upperBoundIndex + 1])
+		if interval.getLower() not in self.getTimes():
+			output.addCheckpoint(self.getAffineCheckpoint(interval.getLower()))
+		if not half_open and interval.getUpper() not in self.getTimes():
+			output.addCheckpoint(self.getAffineCheckpoint(interval.getUpper()))
+		return output
 
-		return result
+	def setConstant(self, c: bool) -> None:
+		"""Mark the signal as a constant Signal."""
+		assert len(self.checkpoints) == 1, "A constant Signal must have exactly 1 checkpoint."
+		self.constant = c
+
+	def isConstant(self) -> bool:
+		return self.constant
 
 	def getValues(self) -> List[float]:
+		""" Get the values for the signal. """
 		return [x.getValue() for x in self.checkpoints]
 
 	def getTimes(self) -> List[float]:
+		""" Get the times for the signal. """
 		return [x.getTime() for x in self.checkpoints]
 
 	def getDerivatives(self) -> List[float]:
+		""" Get the derivatives for the signal. """
 		return [x.getDerivative() for x in self.checkpoints]
 	
 	def getCheckpointCount(self) -> int:
+		""" Get the size of the checkpoint list for the signal. """
 		return len(self.checkpoints)
 
+	def getCheckpoints(self) -> List[SignalValue]:
+		""" Get the list of checkpoints for the signal. """
+		return self.checkpoints
+
 	def getName(self) -> str:
+		""" Get the name for the signal. """
 		return self.name
 
-	def getIndexForTime(self, t: float) -> int:
-		assert t in self.getTimes()
-		# Only the key element (time) matters for lookup
-		return self.checkpoints.bisect_left(SignalValue(t, 0, 0))
-		# return binarySearch(t, self.checkpoints, lambda x: x.getTime())[0]
-		
-	def getSubset(self, x: float, y: float, halfopen: bool = False) -> List[SignalValue]:
-		assert x in self.getTimes() and y in self.getTimes()
-		# SortedList uses the .getTime() function to grab the key
-		# re-using SignalValue class is easiest way to avoid erroring
-		xIndex = self.checkpoints.bisect_left(SignalValue(x, 0, 0))
-		yIndex = self.checkpoints.bisect_left(SignalValue(y, 0, 0))
-		if halfopen:
-			# print(f"Subset[{x}, {y}, halfopen={halfopen}] of {self.oldFormat()} =\n\t{self.checkpoints[xIndex:yIndex]} (Indices: [{xIndex}, {yIndex}])")
-			return self.checkpoints[xIndex:yIndex]
-		# print(f"Subset[{x}, {y}, halfopen={halfopen}] of {self.oldFormat()} =\n\t{self.checkpoints[xIndex:yIndex+1]} (Indices: [{xIndex}, {yIndex+1}])")
-		return self.checkpoints[xIndex:yIndex + 1]
+	def setName(self, name: str) -> None:
+		""" Set the Signal's name attribute. """
+		self.name = name
 
-	def computeDerivatives(self, times: List[float], values: List[float]) -> List[float]:
-		dydx = numpy.diff(times) / numpy.diff(values)
-		return list(dydx) + [0]
+	def getIndexForTime(self, time: float) -> int:
+		""" Find the index where 'time' is located. Errors if time not in the current checkpoint list. """
+		assert time in self.getTimes(), "Can't find an index for a time that isn't in our list."
+		# Only the key element (time) matters for lookup
+		return self.checkpoints.bisect_left(SignalValue(time, 0, 0))
 
 	def verifyPreConditions(self, times: List[float], values: List[float], derivatives: List[float] = None) -> None:
+		""" Check to ensure that the values passed fit the requirements of the Signal class """
 		assert len(times) == len(values), "Signal must have one value per timestamp"
 		assert derivatives is None or len(derivatives) == len(times), "Derivatives must be either None or must have exactly one per timestep."
 		assert all([x >= 0 for x in times]), "Times must be >= 0"
 
 	def getLargestTime(self) -> float:
+		""" Return the value of the largest timestamp """
 		# Returns the checkpoint in self.checkpoints with c.getTime() largest
 		return self.checkpoints[-1].getTime()
 
 	def getLargestTimeBefore(self, time: float, inclusive: bool = True) -> float:
+		""" Return the largest timestamp (specified in a checkpoint), smaller than (or equal to, if inclusive is True) the value in the parameter"""
 		if inclusive:
 			compare = lambda x, y: x <= y
 		else:
 			compare = lambda x, y: x < y
-		# Time must not be negative
-		assert time >= 0
 		# Iterate over all checkpoints, reverse order
 		for i in reversed(range(len(self.checkpoints))):
 			cp = self.checkpoints[i]
@@ -159,48 +155,58 @@ class Signal:
 				return cp.getTime()
 		raise RuntimeError(f"Failed to find largestTimeBefore({time}) for {self}")
 	
+	def getIndexForSmallestTimeAfter(self, time: float, inclusive: bool = True) -> int:
+		""" Return the index at which the checkpoint with the timestamp closest to (but always larger than (or eq iff inclusive)) the given time is """
+		smallestTimeAfter = self.getSmallestTimeAfter(time, inclusive)
+		return self.checkpoints.bisect_left(SignalValue(smallestTimeAfter, 0, 0))
+
+	def getIndexForLargestTimeBefore(self, time: float, inclusive: bool = True) -> int:
+		""" Return the index at which the checkpoint with the timestamp closest to (but always smaller than (or eq iff inclusive)) the given time is """
+		largestTimeBefore = self.getLargestTimeBefore(time, inclusive)
+		return self.checkpoints.bisect_left(SignalValue(largestTimeBefore, 0, 0))
+
 	def getSmallestTimeAfter(self, time: float, inclusive: bool = True) -> float:
-		print("Getting smallestTimeAfter:", time)
-		if time == 2:
-			pass
+		"""Get the smallest time (that is specified in a checkpoint) that is larger than (or equal to, if inclusive is True) the value in parameter"""
 		if inclusive:
 			compare = lambda x, y: x >= y
 		else:
 			compare = lambda x, y: x > y
 		# This method assumes the times are sorted in ascending order
-		# Time must not be negative
-		assert time >= 0
 		for cp in self.checkpoints:
 			if compare(cp.getTime(), time):
 				# We're going through times in ascending order, so this is the smallest cptime after currentTime
-				print(f"\tValue = {cp.getTime()}")
 				return cp.getTime()
 		raise RuntimeError(f"Failed to find smallestTimeAfter({time}) for {self}")
 
 	def getTime(self, index: int) -> float:
-		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
-		try:
-			return self.checkpoints[index].getTime()
-		except IndexError:
-			print(self.checkpoints)
-			print(len(self.checkpoints))
-			print(index)
-			print("^^^FUCK^^^")
-			raise
+		"""Return the timestamp of the signal checkpoint at the specified index"""
+		return self.checkpoints[index].getTime()
+
+	def shift(self, offset: float) -> 'Signal':
+		"""Take the current timestamps, subtract offset"""
+		cp: SignalValue
+		newCheckpoints: List[SignalValue] = []
+		for cp in self.checkpoints:
+			newCheckpoints.append(SignalValue(cp.getTime() - offset, cp.getValue(), cp.getDerivative()))
+		return Signal.fromCheckpoints(f"{self.name}_shift", newCheckpoints)
 
 	def getValue(self, index: int) -> float:
+		"""Return the value of the signal checkpoint at the specified index"""
 		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
 		return self.checkpoints[index].getValue()
 
 	def getDerivative(self, index: int) -> float:
+		"""Return the derivative of the signal checkpoint at the specified index"""
 		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
 		return self.checkpoints[index].getDerivative()
 
 	def getCheckpoint(self, index: int) -> SignalValue:
+		"""Return the signal checkpoint at the specified index"""
 		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
 		return self.checkpoints[index]
 
 	def computeAbsoluteValue(self) -> None:
+		"""Compute the absolute value of this signal. Also recomputes the derivatives."""
 		# Compute the absolute value for all values
 		# This is a no-op for BooleanSignals, does work for non-Boolean Signals.
 		for i in range(len(self.checkpoints)):
@@ -208,12 +214,26 @@ class Signal:
 		self.recomputeDerivatives()
 
 	def recomputeDerivatives(self):
+		"""Re-compute the derivatives part of each SignalValue, to make sure it matches the current values."""
 		if self.checkpoints: # no-op if empty list
 			for i in range(len(self.checkpoints) - 1):
 				valueDiff = self.checkpoints[i+1].getValue() - self.checkpoints[i].getValue()
 				timeDiff = self.checkpoints[i+1].getTime() - self.checkpoints[i].getTime()
 				self.checkpoints[i].setDerivative(valueDiff / timeDiff)
 			self.checkpoints[-1].setDerivative(0)
+
+	def setValue(self, index: int, value: float) -> None:
+		""" Set the value for the checkpoint at index. """
+		self.checkpoints[index].setValue(value)
+
+	def setDerivative(self, index: int, derivative: float) -> None:
+		""" Set the derivative for the checkpoint at index. """
+		self.checkpoints[index].setDerivative(derivative)
+
+	def getDefinedTimeInterval(self) -> Interval:
+		""" Returns the Interval of time over which this Signal is defined -- starts at the first sample point, ends at the last. """
+		# Checkpoints are sorted by time, so we can just get this by index.
+		return Interval(self.getTime(0), self.getTime(-1))
 
 	def __str__(self) -> str:
 		ret = ["Signal with the following checkpoint entries: "]
@@ -230,24 +250,35 @@ class Signal:
 		return f"Signal('{self.name}', {times.__repr__()}, {values.__repr__()}, {derivatives.__repr__()})"
 
 	def addCheckpoint(self, sv: SignalValue) -> None:
+		"""Add a checkpoint to the signal. Insertion location is determined by the SignalValue's timestamp"""
+		if self.constant:
+			raise RuntimeError("Attempting to add a second checkpoint to a constant Signal.")
 		self.checkpoints.add(sv)
 
 	# Similar to addCheckpoint, but creates the SignalValue internally
 	def emplaceCheckpoint(self, time: float, value: float, derivative: float = None) -> None:
+		"""Add a (constructed) checkpoint to the signal. Insertion location is determined by the timestamp"""
 		# if derivative is None:
 		# 	warnings.warn("Replaced None derivative with 0. Ensure this is correct behaviour.")
+		if self.constant:
+			raise RuntimeError("Attempting to add a second checkpoint to a constant Signal.")
 		self.checkpoints.add(SignalValue(time, value, derivative if derivative is not None else 0))
 
 	def oldFormat(self) -> List[List[float]]:
+		"""Grab representation of this signal in the format used in old version of the code.\nMay be useful to compare outputs between the versions."""
 		# Might be useful sometime. 
 		return [self.getTimes(), self.getValues(), self.getDerivatives()]
 
 	def popCheckpoint(self) -> SignalValue:
+		"""Pop the last element from the chekcpoint list and return it"""
 		return self.checkpoints.pop()
 
 	def intersectAtIndex(self, other: 'Signal', index: int) -> Tuple[float, float]:
-		assert index > 0 and len(self.checkpoints) > index, "Requested index is out of range for the current signal."
-		assert len(other.checkpoints) > index, "Requested index out of range for the other signal."
+		"""Compute the point (time, value) where the two signals intersect, given a time index. To be used after a punctualIntersection, else results will be meaningless. """
+		assert len(self.checkpoints) > index and len(self.checkpoints) >= abs(index), "Requested index is out of range for self. "
+		assert len(other.checkpoints) > index and len(self.checkpoints) >= abs(index), "Requested index out of range for other."
+
+
 		xdiff = self.getTime(index-1) - self.getTime(index), other.getTime(index-1) - other.getTime(index)
 		ydiff = self.getValue(index-1) - self.getValue(index), other.getValue(index-1) - other.getValue(index)
 
@@ -262,11 +293,18 @@ class Signal:
 		y = det(d, ydiff) / div
 		return x, y
 
+	def getAffineCheckpoint(self, t: float) -> SignalValue:
+		"""Compute an interpolated checkpoint for the specified time"""
+		return SignalValue(t, self.getInterpolatedValue(t), self.getInterpolatedDerivative(t))
+
 	# Get the value of a signal at time step t
-	def getAffinePoint(self, t: float) -> float:
+	def getInterpolatedValue(self, t: float) -> float:
+		"""Compute an interpolated value for the specified time"""
+		ret: float = None
 		if t > self.getLargestTime():
 			# Compute using derivative if it falls outside of known values
-			return self.getValue(-1) + self.getDerivative(-1) * (t - self.getTime(-1))
+			ret = self.getValue(-1) + self.getDerivative(-1) * (t - self.getTime(-1))
+			return ret
 		i = 0
 		# If it's within known values, find the correct time step
 		while self.getTime(i) < t:
@@ -274,27 +312,68 @@ class Signal:
 		if i == 0 or self.getTime(i) == t:
 			# If point before signal started, return first data point
 			# If it's an exact data point in the signal, return corresponding value
-			return self.getValue(i)
+			ret =  self.getValue(i)
 		elif i >= self.getCheckpointCount():
 			# If it's after the end of signal, return last data point
-			return self.getValue(-1)
+			ret =  self.getValue(-1)
 		else:
 			# If it's somewhere between two data points, interpolate
 			value = self.getValue(i - 1)
 			value += (self.getValue(i) - self.getValue(i-1)) / ((self.getTime(i) - self.getTime(i-1)) * t - self.getTime(i-1))
-			return value	# Get the value of a signal at time step t
+			ret = value	# Get the value of a signal at time step t
+		return ret
 
 	# Get a derivative of the signal at time step t
-	def getAffineDerivative(self, t: float):
+	def getInterpolatedDerivative(self, t: float) -> float:
+		"""Compute an interpolated derivative for the specified time.\n
+		Following the finite, piecewise, linear, continuous hypothesis, 
+		this returns the derivative between the values (in self.getTimes()) that t is located between."""
 		if t < self.getTime(0):
+			warnings.warn("Got derivative before start of signal.")
 			return 0
+		if t > self.getTime(-1):
+			return self.getDerivative(-1)
 		for i in range(self.getCheckpointCount()):
-			if t < self.getTime(i):
+			if t <= self.getTime(i):
 				# Signal is linearly interpolated between points, so derivative is constant on the interval [i-1, i)
 				return self.getDerivative(i-1)
 
+	def computeAnd(self, other: 'Signal') -> 'Signal':
+		""" Computes the logical AND between the two Signals (quantitative). """
+		s = self.__andOrHelper(other, lambda x, y: x > y)
+		# Change the name to specific operation. Probably not vital.
+		s.setName("and")
+		return s
+		
+	def computeOr(self, other: 'Signal') -> 'Signal':
+		""" Computes the logical OR between the two Signals (quantitative). """
+		s = self.__andOrHelper(other, lambda x, y: x > y)
+		# Change the name to specific operation. Probably not vital.
+		s.setName("or")
+		return s
+
+	def __andOrHelper(self, other: 'Signal', operator: Callable=None) -> 'Signal':
+		""" Helper function for the computation of AND and OR, since these are very similar. """
+		lhs: Signal; rhs: Signal; lhs, rhs = self.computeComparableSignals(self, other)
+		result: Signal = Signal("andor")
+		for i in range(lhs.getCheckpointCount()):
+			if lhs.getValue(i) == rhs.getValue(i):
+				result.addCheckpoint(lhs.getCheckpoint(i))
+			else:
+				# Assuming intersectAtIndex is commutative, we can compute the extra checkpoint regardless of result.
+				intersectTime, intersectValue = lhs.intersectAtIndex(rhs, i)
+				# Derivative zero, we compute these at the end when the signal is complete.
+				# F.P.L.C. assumption lets us compute a good derivative value.
+				result.emplaceCheckpoint(intersectTime, intersectValue, 0)
+				if operator(lhs.getValue(i), rhs.getValue(i)):
+					result.addCheckpoint(lhs.getCheckpoint(i))
+				else:
+					result.addCheckpoint(rhs.getCheckpoint(i))
+		result.recomputeDerivatives()
+		return result
 
 	def __eq__(self, other: 'Signal') -> bool:
+		""" Check equality with other Signals. """
 		if type(self) != type(other):
 			return False
 		if self.name != other.name:
@@ -305,3 +384,190 @@ class Signal:
 			if scp != ocp:
 				return False
 		return True
+
+	def isEmpty(self) -> bool:
+		""" Checks if the Signal is empty (i.e. contains no sample points)."""
+		return self.getCheckpointCount() == 0
+
+	@classmethod
+	def computeCheckpointsForComparableSignal(cls, lhsSignal: 'Signal', rhsSignal: 'Signal') -> Tuple['Signal', 'Signal']:
+		""" Gets the checkpoints (sample points) with time value T from both signals where signal.getCheckpoint(T) exists for both. """
+		lhsResult: Signal = Signal("lhs"); rhsResult: Signal = Signal('rhs')
+		cp: SignalValue
+		#bothDefinedInterval: Interval = Interval.computeIntersection(lhsSignal.getDefinedTimeInterval(), rhsSignal.getDefinedTimeInterval())
+		for cp in lhsSignal.getCheckpoints():
+			#if bothDefinedInterval.contains(cp.getTime()):
+			lhsResult.addCheckpoint(cp)
+			rhsResult.emplaceCheckpoint(cp.getTime(), rhsSignal.getInterpolatedValue(cp.getTime()), rhsSignal.getInterpolatedDerivative(cp.getTime()))
+		for cp in rhsSignal.getCheckpoints():
+			# Avoid double entries by checking if the given time is already in the result.
+			if cp.getTime() not in lhsResult.getTimes():
+				#if bothDefinedInterval.contains(cp.getTime()):
+				rhsResult.addCheckpoint(cp)
+				lhsResult.emplaceCheckpoint(cp.getTime(), lhsSignal.getInterpolatedValue(cp.getTime()), lhsSignal.getInterpolatedDerivative(cp.getTime()))
+		
+		# for cp in lhsSignal.getCheckpoints():
+		# 	if cp.getTime() in rhsSignal.getTimes():
+		# 		lhsResult.addCheckpoint(cp)
+		# 		rhsIndex = rhsSignal.getIndexForTime(cp.getTime())
+		# 		rhsResult.addCheckpoint(rhsSignal.getCheckpoint(rhsIndex))
+		return lhsResult, rhsResult
+
+	def merge(self, other: 'Signal') -> None:
+		""" Takes all checkpoints from other and merges them into self.\n
+		Requires that the timestamps are not equal for all checkpoints where the checkpoints are not identical. """
+		assert all([cp.getTime() not in self.getTimes() or self.getCheckpoint(self.getIndexForTime(cp.getTime())) == cp for cp in other.getTimes()])
+		for cp in other.getCheckpoints():
+			self.addCheckpoint(cp)
+
+	def isSingular(self) -> bool:
+		return len(self.getCheckpoints()) == 1
+
+	@classmethod
+	def computeIntersectionPoints(cls, lhsSignal: 'Signal', rhsSignal: 'Signal') -> List[Point]:
+		""" Computes the points (pair<time, value>) where self and other intersect.\n
+		Returns a list of the intersection points. """
+		lhsIndex: int = 0; rhsIndex: int = 0
+		# if lhsSignal.isEmpty() or rhsSignal.isEmpty() or (lhsSignal.isSingular() and rhsSignal.isSingular()):
+		# 	return []
+		def getLineForIndex(signal: Signal, index: int) -> LineSegment:
+			if signal.isSingular():
+				return LineSegment(Point(float('-inf'), signal.getValue(0)), Point(float('inf'), signal.getValue(0)))
+			if signal.isConstant():
+				return LineSegment(Point(float('-inf'), signal.getValue(0)), Point(float('inf'), signal.getValue(0)))
+			return LineSegment(Point(signal.getTime(index), signal.getValue(index)), Point(signal.getTime(index+1), signal.getValue(index+1)))
+		intersectionPoints: List[Point] = []
+		while True:
+			# Get the data as line segments.
+			lhsLine = getLineForIndex(lhsSignal, lhsIndex)
+			rhsLine = getLineForIndex(rhsSignal, rhsIndex)
+			# Add the intersection point if there is one
+			if lhsLine.intersects(rhsLine):
+				intersectionPoints.append(lhsLine.getIntersectionPoint(rhsLine))
+			# check for exit condition
+			if lhsIndex >= lhsSignal.getCheckpointCount() - 2 and rhsIndex >= rhsSignal.getCheckpointCount() - 2:
+					break
+			# Increment the correct counter - the one where the next time value is smallest.
+			if lhsIndex >= lhsSignal.getCheckpointCount() - 2: 
+				rhsIndex += 1
+			elif rhsIndex >= rhsSignal.getCheckpointCount() - 2 or lhsSignal.getTime(lhsIndex + 1) <= rhsSignal.getTime(rhsIndex + 1): 
+				lhsIndex += 1
+			else:
+				rhsIndex += 1
+		return intersectionPoints
+
+	@classmethod
+	def computeComparableSignals(cls, lhsSignal: 'Signal', rhsSignal: 'Signal') -> List['Signal']:
+		""" Create Signals that are comparable - this requires both Signals having the same sample point timings.\n
+		First, we take all sample points from both Signals where the time values are identical.\n
+		Second, we compute all points where, based on the derivative, the Signals intersect. \n
+		Returns two Signals with an equal amount of sample points, where the time part of each sample point pair is equal."""
+
+		# Get the sampling points where self and other are a) both defined or b) intersect
+		# So, any time x where x in self.times() and x in other.times()
+		# + any time y where, through the derivatives, we know that self.value(x) == other.value(x), assuming interpolation.
+		assert type(lhsSignal) == type(rhsSignal), "Operation is unsupported between signals of different semantics."
+		lhsResult: Signal = Signal('empty'); rhsResult: Signal = Signal('empty')
+		if lhsSignal.isEmpty() or rhsSignal.isEmpty():
+			return [lhsResult, rhsResult]
+		# We build the sequence (ri)i≤nz containing the sampling points of y and y' when they are both defined, and the points where y and y' punctually intersect
+		# First, we get the sampling points from the signals where they are both defined (i.e. all sample points with t1==t2)
+		lhsResult, rhsResult = Signal.computeCheckpointsForComparableSignal(lhsSignal, rhsSignal)
+		# Second, we get the intersection points
+		if not lhsResult.isEmpty() and not rhsResult.isEmpty():
+			intersectPoints: List[Point] = Signal.computeIntersectionPoints(lhsResult, rhsResult)
+			for point in intersectPoints:
+				lhsResult.emplaceCheckpoint(point.x, point.y, 0)
+				rhsResult.emplaceCheckpoint(point.x, point.y, 0)
+		lhsResult.recomputeDerivatives()
+		rhsResult.recomputeDerivatives()
+		assert lhsResult.getTimes() == rhsResult.getTimes(), "The punctual intersection function must return two Signals with exactly equal time checkpoints."
+		return [lhsResult, rhsResult]
+
+		# lhsResult.merge(lhsIntersectPoints); rhsResult.merge(rhsIntersectPoints)
+		# # Next, we need to compute the intersection points.
+		# interval: Interval = Interval(lhsResult.getTime(0), lhsResult.getTime(-1))
+		
+
+
+		# return lhsResult, rhsResult
+
+		# i_1 = 0
+		# i_2 = 0
+		# intersectStart: float = max(self.getTime(0), other.getTime(0))
+		# intersectEnd: float = min(self.getTime(-1), other.getTime(-1))
+		# intersectionInterval = Interval(intersectStart, intersectEnd)
+		# lhs: Signal = self.getInterval(intersectionInterval); rhs: Signal = other.getInterval(intersectionInterval)
+		# lhs_result: Signal = Signal('punctualIntersectLHS'); rhs_result: Signal = Signal('punctualIntersectRHS')
+
+		# # Find how many time steps are passed in each signal to get to start
+		# # (Only one signal of two has defined values before start)
+		# while i_1 < len(self.getTimes()) and self.getTime(i_1) < intersectionInterval.getLower():
+		# 	i_1 += 1
+		# while i_2 < len(other.getTimes()) and other.getTime(i_2) < intersectionInterval.getLower():
+		# 	i_2 += 1
+
+		# temp_1, temp_2 = signalType(), signalType()
+
+		# # TODO: shouldn't this and the addition at the end be skipped? -> what isn't know, isn't know
+		# # Add the values at the time steps till start
+		# # We assume that the signals are constant (derivative = 0) before their first know value
+		# for i in range(i_1):
+		# 	temp_1.addCheckpoint(self.getCheckpoint(i))
+		# 	temp_2.emplaceCheckpoint(self.getTime(i), other.getValue(0), 0)
+		# for i in range(i_2):
+		# 	# Add a value at the time step that is defined in s2 and not in s1
+		# 	temp_1.emplaceCheckpoint(other.getTime(i), self.getValue(0), 0)
+		# 	temp_2.addCheckpoint(other.getCheckpoint(i))
+
+		# while i_1 < len(self.getTimes()) and i_2 < len(other.getTimes()) and (self.getTime(i_1) <= intersectionInterval.getUpper() or other.getTime(i_2) <= intersectionInterval.getUpper()):
+		# 	if self.getTime(i_1) == other.getTime(i_2):  # Both signals are defined at the time step
+		# 		temp_1.addCheckpoint(self.getCheckpoint(i_1))
+		# 		temp_2.addCheckpoint(other.getCheckpoint(i_2))
+		# 		i_1 += 1
+		# 		i_2 += 1
+		# 	elif self.getTime(i_1) < other.getTime(i_2):  # s2 is not defined at the i_1 time step where s1 is defined
+		# 		if semantic == 'quantitative':
+		# 			# TODO: Why do we have to compute the derivative? Can't we just take it from Signal?
+		# 			# Derivative of s2 i_2 - 1 * time difference + value of s2 at i_2 - 1 i.e. interpolate the signal value
+		# 			value = (other.getValue(i_2) - other.getValue(i_2 - 1)) / (other.getTime(i_2) - other.getTime(i_2 - 1)) * (self.getTime(i_1) - other.getTime(i_2 - 1)) + other.getValue(i_2 - 1)
+		# 		else:
+		# 			value = (other.getValue(i_2 - 1))
+		# 		temp_2.emplaceCheckpoint(self.getTime(i_1), value, other.getDerivative(i_2 - 1))
+		# 		temp_1.addCheckpoint(self.getCheckpoint(i_1))
+		# 		i_1 += 1
+		# 	elif self.getTime(i_1) > other.getTime(i_2):  # s1 is not defined at the i_2 time step where s2 is defined
+		# 		if semantic == 'quantitative':
+		# 			value = (self.getValue(i_1) - self.getValue(i_1 - 1)) / (self.getTime(i_1) - self.getTime(i_1 - 1)) * (other.getTime(i_2) - self.getTime(i_1 - 1)) + self.getValue(i_1 - 1)
+		# 		else:
+		# 			value = self.getValue(i_1 - 1)
+		# 		temp_1.emplaceCheckpoint(other.getTime(i_2), value, self.getDerivative(i_1 - 1))
+		# 		temp_2.addCheckpoint(other.getCheckpoint(i_2))
+		# 		i_2 += 1
+		# 	else:
+		# 		raise RuntimeError("Something went wrong in getPunctualIntersection")
+
+		# # Fill the values from end on
+		# # We assume that the signals are having a constant derivative from their last known value (should always be 0)
+		# for i in range(i_1, self.getCheckpointCount()):
+		# 	temp_1.addCheckpoint(self.getCheckpoint(i))
+		# 	# TODO: Verify if this new logic is correct
+		# 	# Literal translation commented below; possible correction uncommented.
+		# 	#value = temp_2.getValue(-1) + (temp_2.getTime(-1) - temp_2.getTime(-2)) * temp_2.getDerivative(-1)
+		# 	value = temp_2.getValue(-1) + (self.getTime(i) - temp_2.getTime(-1)) * temp_2.getDerivative(-1)
+		# 	# This one makes more sense: We create a new point at time s1.getTime(i)
+		# 	# So we should compute the difference we expect over the duration from the previous timestamp until the next one
+		# 	# The gap temp_2.getTime(-2) -> temp_2.getTime(-1) could be much larger than the gap between s1.getTime(i) and temp_2.getTime(-1)
+		# 	# Which would lead to errors in the values
+
+		# 	temp_2.emplaceCheckpoint(self.getTime(i), value, temp_2.getDerivative(-1))
+		# for i in range(i_2, other.getCheckpointCount()):
+		# 	temp_2.addCheckpoint(other.getCheckpoint(i))
+		# 	# TODO: Verify logic; see reasoning above.
+		# 	#value = temp_1.getValue(-1) + (temp_1.getTime(-1) - temp_1.getTime(-2)) * temp_1.getDerivative(-1)
+		# 	value = temp_1.getValue(-1) + (other.getTime(i) - temp_1.getTime(-1)) * temp_1.getDerivative(-1)
+		# 	temp_1.emplaceCheckpoint(other.getTime(i), value, temp_1.getDerivative(-1))
+		# # print(f"Punctual Intersection: ")
+		# # print(f"\t{temp_1}")
+		# # print(f"\t{temp_2}")
+		# return SignalList([temp_1, temp_2])

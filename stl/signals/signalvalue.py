@@ -1,4 +1,6 @@
 import warnings
+from typing import List
+
 class SignalValue:
 	# Data container class for signal values
 	# A signal is a collection of these, sorted by self.timestamp (ascending)
@@ -19,8 +21,16 @@ class SignalValue:
 	def getDerivative(self) -> float:
 		return self.derivative
 	
+
+	# WARNING: Using this on a checkpoint that is inside a SortedList will lead to hard to find buggy behaviour. 
+	# It is imperative that this function only be used before the checkpointed is inserted in a SortedList, as the
+	# SortedList uses the timestamp attribute of the SignalValue class as the key to sort by.
 	def setTime(self, v: float) -> None:
-		raise NotImplementedError("Modifying time would require re-sorting the SignalValue list. This operation is unsupported.")
+		"""
+		Sets the timestamp for the SignalValue instance.
+		This method must not be used when the checkpoint has been inserted in a container that sorts by the timestamp.
+		"""
+		self.timestamp = float(v)
 	
 	def setValue(self, v: float) -> None:
 		self.value = float(v)
@@ -28,13 +38,15 @@ class SignalValue:
 	def setDerivative(self, v:float) -> None:
 		self.derivative = float(v)
 	
-	def __str__(self):
+	def __str__(self) -> str:
 		return f"SignalValue<T={self.timestamp},V={self.value},D={self.derivative}>"
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return f"SignalValue({self.timestamp.__repr__()}, {self.value.__repr__()}, {self.derivative.__repr__()})"
 
-	def __eq__(self, other: 'SignalValue'):
+	def __eq__(self, other: 'SignalValue') -> bool:
+		if type(other) is not type(self):
+			super().__eq__(other)
 		return self.timestamp == other.timestamp and self.value == other.value and self.derivative == other.derivative
 
-	def oldFormat(self):
+	def oldFormat(self) -> List[List[float]]:
 		return [[self.getTime()], [self.getValue()], [self.getDerivative()]]

@@ -19,3 +19,11 @@ AndNode:
 	Testing this is essentially identical to testing the calculate_and_or function, with parameter 'and'.
 	However, there's no OrNode (because it gets replaced by 'not and(not a, not b)' during parsing)
 	Does any part of the code use the or computation part of calculate_and_or? If no, wouldn't it make more sense to eliminate that function?
+
+__computeEventually:
+	Value in using this method over what we use to compute the Eventually operator in the syntax?
+	We compute the Eventually operator by adding a dummy signal to an Until node and then computing X (always true) until Y. 
+	This works, but if we have an efficient implementation of Eventually, it would make sense to replace the computation of an Eventually operator with that as well, right?
+
+LongAlgorithm:
+	Long algorithm switches between left and right child getTimes() for the times of z_0. Ensure this is intentional.

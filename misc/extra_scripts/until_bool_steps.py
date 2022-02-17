@@ -5,6 +5,7 @@ from numbers import Number
 import numpy
 import matplotlib.pyplot as plt
 from stl.stlUtils import *
+from stl.signals import SignalList
 
 currentPlot = 0
 plotAmount = 11
@@ -15,7 +16,7 @@ semantic = 'boolean'
 
 # temp_signal = [[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]], [[0.0, 1.0, 2.5, 3.5, 4.0, 5.0, 6.0, 7.155, 8.0, 9.0, 10.02, 11.0, 12.0], [0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]]
 temp_signal = [[[0.0, 1.0, 2.1, 3.0, 4.0, 5.0, 6.1, 7.0, 8.0, 8.2, 10.0, 11.0, 12.0], [0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1]], [[0.0, 1.0, 2.5, 3.5, 4.0, 5.0, 6.0, 7.155, 8.0, 9.0, 10.02, 11.0, 12.0], [0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0]]]
-result = list(getPunctualIntersection(temp_signal[0], temp_signal[1], semantic))
+result = SignalList(Signal.computeComparableSignals(temp_signal[0], temp_signal[1]))
 
 axs[currentPlot].step(temp_signal[1][0], temp_signal[1][1], 'g-', result[1][0], result[1][1], 'r-', where='post')
 axs[currentPlot].set_title('s1')

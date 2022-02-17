@@ -22,27 +22,31 @@ class EventuallyOperationTest(UntilNodeSetup):
 		self.setInterval(lowerBound, upperBound)
 
 	def __quantitativeEventuallyHelper(self, lowerBound: float, upperBound: float, signal: Signal, method: str):
-		self.__eventuallyHelper(lowerBound, upperBound, signal)
+		self.__eventuallyHelper(lowerBound, upperBound)
 		self.rightSignalChild.quantitativeValidate.return_value = signal
 		generatedDummyTrue = Signal("DummyTrueSignal", signal.getTimes(), [1] * signal.getCheckpointCount(), [0] * signal.getCheckpointCount())
 		with mock.patch.object(self.node, method, return_value=Signal()) as mymock:
-			self.node.quantitativeValidate(None, None)
+			result = self.node.quantitativeValidate(None, None)
 			self.rightSignalChild.quantitativeValidate.assert_called_once_with(None, None)
 			self.intervalLowerBoundChild.quantitativeValidate.assert_called_once_with(None, None)
 			self.intervalUpperBoundChild.quantitativeValidate.assert_called_once_with(None, None)
 			mymock.assert_called_once_with(signal.getCheckpointCount(), [generatedDummyTrue, signal], Interval(lowerBound, upperBound))
 		self.resetMocks()
+		return result
 
 	def __booleanEventuallyHelper(self, lowerBound: float, upperBound: float, signal: Signal):
 		self.__eventuallyHelper(lowerBound, upperBound)
 		self.rightSignalChild.booleanValidate.return_value = signal
 		generatedDummyTrue = BooleanSignal("DummyTrueSignal", signal.getTimes(), [1] * signal.getCheckpointCount(), [0] * signal.getCheckpointCount())
 		with mock.patch.object(self.node, 'booleanValidationImplementation', return_value=BooleanSignal()) as mymock:
-			self.node.booleanValidate(None, None)
+			result = self.node.booleanValidate(None, None)
 			self.rightSignalChild.booleanValidate.assert_called_once_with(None, None)
 			self.intervalLowerBoundChild.booleanValidate.assert_called_once_with(None, None)
 			self.intervalUpperBoundChild.booleanValidate.assert_called_once_with(None, None)
 			mymock.assert_called_once_with(signal.getCheckpointCount(), [generatedDummyTrue, signal], Interval(0, 24))
+		self.resetMocks()
+		return result
+	
 	def testEventuallyShortAlgorithm(self):
 		testSignal = getCosSignal(20, booleanSignal=False)
 		self.node.useShortAlgorithm()

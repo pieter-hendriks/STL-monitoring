@@ -7,11 +7,28 @@ class Interval:
 		self.upperLimit = b
 	
 	def getLower(self) -> float:
+		""" Get the lower limit of the interval. """
 		return self.lowerLimit
 
 	def getUpper(self) -> float:
+		""" Get the upper limit of the interval. """
 		return self.upperLimit
+
+	@classmethod
+	def computeIntersection(cls, lhs: 'Interval', rhs: 'Interval') -> 'Interval':
+		""" Compute the intersection between the two intervals.\n\nFor intervals [a, b] and [c,d], this is [max(a,c), min(b,d)]."""
+		return Interval(
+			max(lhs.getLower(), rhs.getLower()),
+			min(lhs.getUpper(), rhs.getUpper())
+		)
+
+	def contains(self, value: float) -> bool:
+		""" Checks if the value is in the interval (closed): lower <= value <= upper """
+		return self.getLower() <= value <= self.getUpper()
 	
+	def isSingular(self) -> bool:
+		return self.getLower() == self.getUpper()
+
 	def __eq__(self, other: 'Interval') -> bool:
 		if not isinstance(other, Interval):
 			return super().__eq__(other)
@@ -23,14 +40,15 @@ class Interval:
 	def __repr__(self) -> str:
 		return f"Interval({self.lowerLimit}, {self.upperLimit})"
 
-	def __add__(self, const: Number) -> 'Interval':
-		return Interval(self.lowerLimit + const, self.upperLimit + const)
+	def __add__(self, c: Number) -> 'Interval':
+		return Interval(self.lowerLimit + c, self.upperLimit + c)
 
-	def __sub__(self, const: Number) -> 'Interval':
-		return Interval(self.lowerLimit - const, self.upperLimit + const)
+	def __sub__(self, c: Number) -> 'Interval':
+		return Interval(self.lowerLimit - c, self.upperLimit - c)
 
-	def __mult__(self, const: Number) -> 'Interval':
-		return Interval(self.lowerLimit * const, self.upperLimit + const)
+	def __mult__(self, c: Number) -> 'Interval':
+		return Interval(self.lowerLimit * c, self.upperLimit * c)
 
-	def __div__(self, const: Number) -> 'Interval':
-		return Interval(self.lowerLimit / const, self.upperLimit + const)
+	def __truediv__(self, c: Number) -> 'Interval':
+		return Interval(self.lowerLimit / c, self.upperLimit / c)
+	
