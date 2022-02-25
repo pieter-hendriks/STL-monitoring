@@ -9,7 +9,7 @@ class AbsoluteValueNode(OperationNode):
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
 		result = self.children[0].quantitativeValidate(signals, plot)
-		result.computeAbsoluteValue()
+		Signal.computeAbsoluteValue(result)
 		return result
 
 	def booleanValidate(self, signals:SignalList, plot: bool) -> BooleanSignal:

@@ -1,5 +1,4 @@
 from .formulanode import FormulaNode
-from stl.stlUtils import calculate_and_or
 from ....signals import Signal, BooleanSignal, SignalList
 class AndNode(FormulaNode):
 	def __init__(self):
@@ -9,7 +8,7 @@ class AndNode(FormulaNode):
 		result: Signal = Signal('and')
 		lhs: Signal; rhs: Signal
 		lhs, rhs = self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)
-		result = calculate_and_or(lhs, rhs, 'and')
+		result = Signal.computeAnd(lhs, rhs)
 		if plot:
 			self.quantitativePlot(result)
 		result.recomputeDerivatives()

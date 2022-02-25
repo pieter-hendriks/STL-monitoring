@@ -1,5 +1,6 @@
 import warnings
 from typing import List
+import math
 
 class SignalValue:
 	# Data container class for signal values
@@ -21,7 +22,9 @@ class SignalValue:
 	def getDerivative(self) -> float:
 		return self.derivative
 	
-
+	def copy(self) -> float:
+		return SignalValue(self.timestamp, self.value, self.derivative)
+		
 	# WARNING: Using this on a checkpoint that is inside a SortedList will lead to hard to find buggy behaviour. 
 	# It is imperative that this function only be used before the checkpointed is inserted in a SortedList, as the
 	# SortedList uses the timestamp attribute of the SignalValue class as the key to sort by.
@@ -46,6 +49,11 @@ class SignalValue:
 	def __eq__(self, other: 'SignalValue') -> bool:
 		if type(other) is not type(self):
 			super().__eq__(other)
+		return (
+			    math.isclose(self.timestamp, other.timestamp, rel_tol=1e-7)
+			and math.isclose(self.value, other.value, rel_tol=1e-7)
+			and math.isclose(self.derivative, other.derivative, rel_tol=1e-7)
+		)
 		return self.timestamp == other.timestamp and self.value == other.value and self.derivative == other.derivative
 
 	def oldFormat(self) -> List[List[float]]:

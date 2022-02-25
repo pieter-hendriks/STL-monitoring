@@ -15,12 +15,7 @@ class BinaryOperationNodeDivisionTest(BinaryOperationTest):
 		# Empty signal should return empty signal - name should be 'quotient', always
 		s1: Signal = Signal('quotient')
 		s2 = Signal("differentName")
-		self.quantitativeValidationTestHelper(s1, s1, s1)
 		self.quantitativeValidationTestHelper(s2, s2, s1)
-		s1 = BooleanSignal('quotient')
-		s2 = BooleanSignal("different")
-		self.booleanValidationTestHelper(s1, s1, s1)
-		self.booleanValidationTestHelper(s2, s2, s1)
 
 	def testPosPosDivision(self):
 		# Test quantitative semantics

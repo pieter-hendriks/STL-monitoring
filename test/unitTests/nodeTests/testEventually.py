@@ -49,15 +49,15 @@ class EventuallyOperationTest(UntilNodeSetup):
 	
 	def testEventuallyShortAlgorithm(self):
 		testSignal = getCosSignal(20, booleanSignal=False)
-		self.node.useShortAlgorithm()
+		self.node.useSyntaxAlgorithm()
 		self.__quantitativeEventuallyHelper(0, 24, testSignal, 'shortAlgorithm')
 
 	def testEventuallyLongAlgorithm(self):
 		testSignal = getCosSignal(20, booleanSignal=False)
-		self.node.useLongAlgorithm()
+		self.node.useEfficientAlgorithm()
 		self.__quantitativeEventuallyHelper(0, 24, testSignal, 'longAlgorithm')
 
 	def testEventuallyBoolean(self):
 		testSignal = getCosSignal(20, booleanSignal=False)
-		self.node.useLongAlgorithm()
+		self.node.useEfficientAlgorithm()
 		self.__booleanEventuallyHelper(0, 24, testSignal)

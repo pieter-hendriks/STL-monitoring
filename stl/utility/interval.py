@@ -22,9 +22,11 @@ class Interval:
 			min(lhs.getUpper(), rhs.getUpper())
 		)
 
-	def contains(self, value: float) -> bool:
+	def contains(self, value: float, closed: bool = True) -> bool:
 		""" Checks if the value is in the interval (closed): lower <= value <= upper """
-		return self.getLower() <= value <= self.getUpper()
+		if closed:
+			return self.getLower() <= value <= self.getUpper()
+		return self.getLower() <= value < self.getUpper()
 	
 	def isSingular(self) -> bool:
 		return self.getLower() == self.getUpper()

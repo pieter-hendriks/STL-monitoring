@@ -1,193 +1,117 @@
+from unittest import result
+
+from numpy import maximum
 from .formulanode import FormulaNode
-from ..valuenodes import ValueNode
-from ....stlUtils import calculate_and_or, getBooleanIntersection
+from ....stlUtils import getBooleanIntersection
 from ....utility import Interval
 from ....signals import Signal, BooleanSignal, SignalList, SignalValue
-from typing import Tuple, List
-from numbers import Number
+from typing import List
 import warnings
 
 class UntilNode(FormulaNode):
 	def __init__(self) -> None:
 		super().__init__()
-		self.__useShortAlgorithm = True
+		self.__useSyntaxAlgorithm = True
 	
-	def useShortAlgorithm(self):
-		self.__useShortAlgorithm = True
+	def useSyntaxAlgorithm(self):
+		self.__useSyntaxAlgorithm = True
 
-	def useLongAlgorithm(self):
-		self.__useShortAlgorithm = False
+	def useEfficientAlgorithm(self):
+		self.__useSyntaxAlgorithm = False
 
-	def shortAlgorithm(self, size: int, childResults: List[Signal], interval: Interval) -> Signal:
-		output: Signal = Signal("until")
+	def syntaxAlgorithm(self, size: int, childResults: List[Signal], interval: Interval) -> Signal:
+		output: Signal = Signal("timedUntil")
 		for i in range(size):
 			t = childResults[1].getTime(i)
-			inter_2 = childResults[1].getInterval(interval + t, half_open=False)
+			rhsInterval = childResults[1].computeInterval(interval + t, half_open=False)
 			values = []
 			derivatives = []
-			for j in range(inter_2.getCheckpointCount()):
-				k = inter_2.getTime(j)
-				inter_1 = childResults[0].getInterval(Interval(t, k), half_open=False)
-				values.append(min(inter_2.getValue(j), min(inter_1.getValues())))
-				derivatives.append(min(inter_2.getDerivative(j), min(inter_1.getDerivatives())))
-			output.emplaceCheckpoint(t, max(values), max(derivatives))
+			for j in range(rhsInterval.getCheckpointCount()):
+				k = rhsInterval.getTime(j)
+				lhsInterval = childResults[0].computeInterval(Interval(t, k), half_open=False)
+				values.append(min(rhsInterval.getValue(j), min(lhsInterval.getValues())))
+				derivatives.append(min(rhsInterval.getDerivative(j), min(lhsInterval.getDerivatives())))
+			if values:
+				output.emplaceCheckpoint(t, max(values), max(derivatives))
 		for i in reversed(range(output.getCheckpointCount())):
 			updatedLastTime = childResults[0].getTime(-1) - interval.getUpper()
 			if output.getTime(i) > updatedLastTime:
 				sv = output.popCheckpoint()
 				if sv.getTime() < updatedLastTime:
-					output.emplaceCheckpoint(updatedLastTime, output.getInterpolatedValue(updatedLastTime), output.getDerivative(-2))
+					output.emplaceCheckpoint(updatedLastTime, output.computeInterpolatedValue(updatedLastTime), output.getDerivative(-2))
 		output.recomputeDerivatives()
 		return output
-	
-	# Shorthand to avoid having to specify the 'and' and 'or' parameters.
-	def __computeAnd(self, x: Signal, y: Signal):
-		return calculate_and_or(x, y, 'and')
 
-	def __computeOr(self, x: Signal, y: Signal):
-		return calculate_and_or(x, y, 'or')
 
-	def computeEventually(self, signal: Signal, interval: Interval, t0: float = None):
-		if t0 is None:
-			t0 = signal.getTime(0)
-		# y is paper's notation for the signal's robustness (=='signal' in this function)
-		pointwiseMaximumSignalSegments = self.__computeOr(signal.shift(interval.getLower()), signal.shift(interval.getUpper())) # == " y' " from the paper
-		print(f"Or({signal.shift(interval.getLower()).oldFormat()}, {signal.shift(interval.getUpper()).oldFormat()}) --> {pointwiseMaximumSignalSegments.oldFormat()}")
-		# Initialize variables
-		slidingWindowLowerBound = signal.getTime(0) - interval.getUpper() # == 's' from the paper
-		slidingWindowUpperBound = slidingWindowLowerBound # == 't' from the paper
-		currentIndex = 0 # == 'i' from the paper
-		maximumCandidates: set[int] = {0}  # == 'M' from the paper
-		output = Signal('eventually') # 'z' from paper
-		while slidingWindowUpperBound + interval.getLower() < signal.getTime(-1) and currentIndex < signal.getCheckpointCount()-1: 
-			# ---> TODO: Early exit condition may be masking an error
-			# TODO: Figure out reasonable names for 'xxx' and 'yyy'
-			earliestMaxCandidateLBOffsetTime = signal.getTime(min(maximumCandidates)) - interval.getLower()
-			nextIndexUBOffsetTime = signal.getTime(currentIndex + 1) - interval.getUpper()
-			slidingWindowUpperBound = min(earliestMaxCandidateLBOffsetTime, nextIndexUBOffsetTime)
-			if slidingWindowUpperBound == earliestMaxCandidateLBOffsetTime:
-				maximumCandidates.remove(min(maximumCandidates))
-				slidingWindowLowerBound = slidingWindowUpperBound
-			if slidingWindowUpperBound == nextIndexUBOffsetTime:
-				while maximumCandidates and signal.getInterpolatedValue(nextIndexUBOffsetTime) >= signal.getValue(max(maximumCandidates)):
-					maximumCandidates.remove(max(maximumCandidates))
-				currentIndex += 1
-				maximumCandidates.add(currentIndex)
-			if slidingWindowUpperBound >= signal.getTime(0):
-				lowerBound = max(signal.getTime(0), slidingWindowLowerBound)
-				pointwiseMaximumCurrentSignalSegment = pointwiseMaximumSignalSegments.getInterval(Interval(lowerBound, slidingWindowUpperBound), half_open=False)
-				if not maximumCandidates:
-					maximumCandidates.add(currentIndex + 1)
-				maximumCandidate = Signal.createConstant('potentialMax', signal.getValue(min(maximumCandidates)))
-				maximum = self.__computeOr(pointwiseMaximumCurrentSignalSegment, maximumCandidate)
-				print("Go for adding!")
-				for checkpoint in maximum.getCheckpoints():
-					# if not Interval(slidingWindowLowerBound, slidingWindowUpperBound).contains(checkpoint.getTime()):
-					# 	raise AssertionError("This is supposed to be impossible - we fill in Z in segments [s, t)")
-					print(f"Maximum checkpoint to be added: {checkpoint.oldFormat()}")
-					if checkpoint.getTime() in output.getTimes():
-						index = output.getIndexForTime(checkpoint.getTime())
-						output.setValue(index, checkpoint.getValue())
-						output.recomputeDerivatives()
-					else:
-						output.addCheckpoint(checkpoint)
-						output.recomputeDerivatives()
-		return output
+	# def longAlgorithm(self, size: int, childResults: SignalList, interval: Interval) -> Signal:
+	# 	# Begin algorithm for until
+	# 	previousValueConst: Signal = Signal.createConstant('False', -1)
+	# 	index = childResults[0].getCheckpointCount() - 1
+	# 	output = Signal("until")
+	# 	while index >= 0:
+	# 		relevantSubsetInterval: Interval = Interval(index, index + 1)
+	# 		lhsSubset: Signal = childResults[0].getInterval(relevantSubsetInterval, half_open = True)
+	# 		rhsSubset: Signal = childResults[1].getInterval(relevantSubsetInterval, half_open = True)
+	# 		if childResults[0].getDerivative(index) <= 0:
+	# 			rhsEventually: Signal = self.computeTimedEventually(rhsSubset, relevantSubsetInterval, childResults[0].getTime(0))
+	# 	while index >= 0:
+	# 		relevantSubsetInterval: Interval = Interval(index, index + 1)
+	# 		lhsSubset: Signal = childResults[0].getInterval(relevantSubsetInterval, half_open = True)
+	# 		rhsSubset: Signal = childResults[1].getInterval(relevantSubsetInterval, half_open = True)
+	# 		if childResults[0].getDerivative(index) <= 0:
+	# 			z_1: Signal = Signal.computeAnd(rhsSubset, lhsSubset)
+	# 			print(f"And({rhsSubset.oldFormat()}, {lhsSubset.oldFormat()}) --> {z_1.oldFormat()}")
+	# 			# assert z_1.getTime(0) == childResults[0].getTime(0), "Replaced eventually operation - new implementation relies on timestamps being identical."
+	# 			z_2: Signal = self.computeTimedEventually(z_1, interval, childResults[0].getTime(0))
+	# 			print(f"Eventually[{interval}]({z_1.oldFormat()}) --> {z_2.oldFormat()} (t_0 = {childResults[0].getTime(0)})")
+	# 			z_3: Signal = Signal.computeAnd(lhsSubset, previousValueConst)
+	# 			print(f"And({lhsSubset.oldFormat()}, {previousValueConst.oldFormat()}) --> {z_3.oldFormat()}")
+	# 		else:
+	# 			# assert rightChildSubset.getTime(0) == childResults[0].getTime(0), "Replaced eventually operation - new implementation relies on timestamps being identical."
+	# 			z_1: Signal = self.computeTimedEventually(rhsSubset, interval, childResults[0].getTime(0))
+	# 			print(f"Eventually[{interval}]({rhsSubset.oldFormat()}) --> {z_1.oldFormat()} (t_0 = {childResults[0].getTime(0)})")
+	# 			z_2: Signal = Signal.computeAnd(z_1, lhsSubset)
+	# 			print(f"And({z_1.oldFormat()}, {lhsSubset.oldFormat()}) --> {z_2.oldFormat()}")
+	# 			dummySignal: Signal = Signal("internal", childResults[0].getTimes(), [childResults[0].getTime(index + 1)] * size, [0] * size)
+	# 			z_3: Signal = Signal.computeAnd(dummySignal, previousValueConst)
+	# 			print(f"And({dummySignal.oldFormat()}, {previousValueConst.oldFormat()}) --> {z_3.oldFormat()}")
+	# 		outputSegment: Signal = Signal.computeOr(z_2, z_3)
+	# 		print(f"Or({z_2.oldFormat()}, {z_3.oldFormat()}) --> {outputSegment.oldFormat()}")
+	# 		t_i = outputSegment.computeIndexForTime(childResults[1].getTime(index))
+	# 		if childResults[1].getTime(index + 1) == childResults[1].getTime(-1):
+	# 			t_i_1 = outputSegment.getCheckpointCount()
+	# 		else:
+	# 			t_i_1 = outputSegment.computeIndexForTime(childResults[1][0][index + 1])
+	# 		for i in range(t_i, t_i_1):
+	# 			output.addCheckpoint(outputSegment.getCheckpoint(i))
+	# 		index -= 1
+	# 		previousValueConst = Signal('z_0', childResults[0].getTimes(), [output.getValue(0)] * size, [0] * size)
+	# 	return output
 
-		# while currentTimeUpperBound + interval.getLower() < signal.getTime(-1):
-		# 	if currentIndex + 1 < signal.getCheckpointCount() and len(M) > 0:
-		# 		currentTimeUpperBound = min(min(M) - interval.getLower(), signal.getTime(currentIndex + 1) - interval.getUpper())
-		# 	elif len(M) == 0:
-		# 		currentTimeUpperBound = signal.getTime(currentIndex + 1) - interval.getUpper()
-		# 	else:
-		# 		currentTimeUpperBound = min(M) - interval.getLower()
-
-		# 	if len(M) > 0 and currentTimeUpperBound == min(M) - interval.getLower():
-		# 		M.remove(min(M))
-		# 		# not sure if the z computation shouldn't be here... (gives the same result on the examples)
-		# 		currentTimeLowerBound = currentTimeUpperBound
-
-		# 	if currentTimeLowerBound >= t_0:
-		# 		if len(M) == 0:
-		# 			computed_or = yPrime
-		# 		else:
-		# 			yt_minM = signal.getAffineValue(min(M))
-		# 			y_s_t = yPrime.getInterval(Interval(currentTimeLowerBound, currentTimeUpperBound))
-		# 			y_constant = Signal('y_constant', yPrime.getTimes(), [yt_minM] * yPrime.getCheckpointCount(), [0] * yPrime.getCheckpointCount())
-		# 			computed_or = calculate_and_or(y_s_t, y_constant, 'or')
-		# 		print(f"Computed_or = {computed_or.oldFormat()}")
-		# 		i_s = computed_or.getIndexForTime(currentTimeLowerBound)
-		# 		i_t = computed_or.getIndexForTime(currentTimeUpperBound)
-
-		# 		for index in range(i_s, i_t + 1):
-		# 			if computed_or.getTime(index) not in output.getTimes():
-		# 				output.addCheckpoint(computed_or.getCheckpoint(index))
-		# 			else:
-		# 				i_z = output.getIndexForTime(computed_or.getTime(index))
-		# 				output.setValue(i_z, computed_or.getValue(index))
-		# 				output.setDerivative(i_z, computed_or.getDerivative(index))
-
-		# 	if currentIndex + 1 < signal.getCheckpointCount() and currentTimeUpperBound == signal.getTime(currentIndex + 1) - interval.getUpper():
-		# 		while len(M) != 0 and signal.getAffineValue(signal[0][currentIndex + 1]) >= signal.getAffineValue(max(M)):
-		# 			M.remove(max(M))
-		# 		M.add(signal.getTime(currentIndex + 1))
-		# 		currentIndex += 1
-		# print(f"EVENTUALLY RESULT = {output.oldFormat()}")
-		# return output
-
-	def longAlgorithm(self, size: int, childResults: SignalList, interval: Interval) -> Signal:
-		# Begin algorithm for until
-		output = Signal("until")
-		warnings.warn("Long algorithm switches between left and right child getTimes() for the times of z_0. Ensure this is intentional.")
-		z_0 = Signal('z_0', childResults[1].getTimes(), [0]*size, [0]*size)
-		index = childResults[0].getCheckpointCount() - 2 
-		while index >= 0:
-			relevantSubsetInterval: Interval = Interval(index, index + 2)
-			print("Signals:")
-			print(childResults[0])
-			print(childResults[1])
-			leftChildSubset: Signal = childResults[0].getInterval(relevantSubsetInterval, half_open = True)
-			rightChildSubset: Signal = childResults[1].getInterval(relevantSubsetInterval, half_open = True)
-			print("Subsets:")
-			print("__________________")
-			print(leftChildSubset)
-			print("__________________")
-			print("__________________")
-			print(rightChildSubset)
-			print("__________________")
-			if childResults[0].getDerivative(index) <= 0:
-				z_1: Signal = self.__computeAnd(rightChildSubset, leftChildSubset)
-				print(f"And({rightChildSubset.oldFormat()}, {leftChildSubset.oldFormat()}) --> {z_1.oldFormat()}")
-				# assert z_1.getTime(0) == childResults[0].getTime(0), "Replaced eventually operation - new implementation relies on timestamps being identical."
-				z_2: Signal = self.computeEventually(z_1, interval, childResults[0].getTime(0))
-				raise RuntimeError(f"Running Eventually: {z_1.oldFormat()}, {interval}, {childResults[0].getTime(0)}\n\t==> {z_2.oldFormat()}")
-				print(f"Eventually[{interval}]({z_1.oldFormat()}) --> {z_2.oldFormat()} (t_0 = {childResults[0].getTime(0)})")
-				z_3: Signal = self.__computeAnd(leftChildSubset, z_0)
-				print(f"And({leftChildSubset.oldFormat()}, {z_0.oldFormat()}) --> {z_3.oldFormat()}")
-			else:
-				# assert rightChildSubset.getTime(0) == childResults[0].getTime(0), "Replaced eventually operation - new implementation relies on timestamps being identical."
-				z_1: Signal = self.computeEventually(rightChildSubset, interval, childResults[0].getTime(0))
-				raise RuntimeError(f"Running Eventually: {rightChildSubset.oldFormat()}, {interval}, {childResults[0].getTime(0)}\n\t==> {z_1.oldFormat()}")
-				print(f"Eventually[{interval}]({rightChildSubset.oldFormat()}) --> {z_1.oldFormat()} (t_0 = {childResults[0].getTime(0)})")
-				z_2: Signal = self.__computeAnd(z_1, leftChildSubset)
-				print(f"And({z_1.oldFormat()}, {leftChildSubset.oldFormat()}) --> {z_2.oldFormat()}")
-				dummySignal: Signal = Signal("internal", childResults[0].getTimes(), [childResults[0].getTime(index + 1)] * size, [0] * size)
-				z_3: Signal = self.__computeAnd(dummySignal, z_0)
-				print(f"And({dummySignal.oldFormat()}, {z_0.oldFormat()}) --> {z_3.oldFormat()}")
-			temp: Signal = self.__computeOr(z_2, z_3)
-			print(f"Or({z_2.oldFormat()}, {z_3.oldFormat()}) --> {temp.oldFormat()}")
-			t_i = temp.getIndexForTime(childResults[1].getTime(index))
-			if childResults[1].getTime(index + 1) == childResults[1].getTime(-1):
-				t_i_1 = temp.getCheckpointCount()
-			else:
-				t_i_1 = temp.getIndexForTime(childResults[1][0][index + 1])
-			for i in range(t_i, t_i_1):
-				output.addCheckpoint(temp.getCheckpoint(i))
-			index -= 1
-			z_0 = Signal('z_0', childResults[0].getTimes(), [output.getValue(0)] * size, [0] * size)
-		return output
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool=False) -> Signal:
+		if not self.__useSyntaxAlgorithm:
+			if len(self.children) == 1:
+				# Untimed eventually -- no time interval children, 1 signal child
+				return Signal.computeUntimedEventually(self.children[0].quantitativeValidate(signals, plot))
+			if len(self.children) == 2:
+				# Untimed Until -- no time interval children, 2 signal children ( two time interval and no signal isn't a possibility)
+				return Signal.computeUntimedUntil(self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot))
+			interval: Interval = Interval(self.children[-3].quantitativeValidate(signals, plot).getValue(0), self.children[-2].quantitativeValidate(signals, plot).getValue(0))
+			if len(self.children) == 3:
+				# Timed eventually - 2 time interval children, 1 signal child (time interval must always be exactly 0 or exactly 2, so this is only option)
+				return Signal.computeTimedEventually(self.children[-1].quantitativeValidate(signals, plot), interval)
+			# len(self.children) == 4: timed until, 2 time interval children, 2 signal children
+			return Signal.computeTimedUntil(self.children[0].quantitativeValidate(signals, plot), self.children[3].quantitativeValidate(signals, plot), interval)
+		
+		# TODO:
+		# Code here needs some cleaning. The efficient algorithm's implementation now neatly handles all operators without needing any of the below code.
+		# The syntax algorithm, however, may need to interval to be present, so may not operate at all if we have e.g. 1 or 2 children.
+		# For now, to avoid dealing with that issue, I've left the code below unchanged for the short algorithm. 
+		# In case any long algorithm call is hit, it will assert False.
+
+		warnings.warn("Falling back to old behaviour for short algorithm. Please fix.")
+	
 		# Check if one or two formula nodes as children, if one -> add true signal
 		if len(self.children) == 4:
 			childResults: SignalList = SignalList([self.children[0].quantitativeValidate(signals, plot), self.children[3].quantitativeValidate(signals, plot)])
@@ -206,10 +130,12 @@ class UntilNode(FormulaNode):
 		bSignal: Signal = self.children[-2].quantitativeValidate(signals, plot)
 		assert aSignal.getCheckpointCount() == bSignal.getCheckpointCount() == 1, f"Ambiguous interval sizes. These should be from ValueNodes, which return a single-value Signal."
 		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
-		if self.__useShortAlgorithm:
-			until = self.shortAlgorithm(size, childResults, interval)
+		if self.__useSyntaxAlgorithm:
+			until = self.syntaxAlgorithm(size, childResults, interval)
 		else:
-			until = self.longAlgorithm(size, childResults, interval)
+			# TODO: Remove this once the above has been corrected.
+			assert False, "This should be unreachable since recent changes. See TODO/warning above."
+			#until = self.longAlgorithm(size, childResults, interval)
 		if plot:
 			self.quantitativePlot(until)
 		return until
@@ -312,6 +238,74 @@ class UntilNode(FormulaNode):
 				else:
 					until.popCheckpoint()
 		return until
+
+		# # Doing this requires a little preprocessing. Specifically, we note that for an interval [a, b], we can never have any results involving the timesteps [0, a]
+		# # These can be excluded from our signal.
+		# warnings.warn("Timestamp handling is incomplete for time steps of irregular size")
+		# droppedPrefixSignal: Signal = signal.getInterval(Interval(interval.getLower(), float('inf')))
+		# # TODO: Some how account for irregularly sized timesteps!
+		# droppedPrefixSignal.shift(-1 * interval.getLower())
+		# # Next, the algorithm doesn't care about the interval itself - we only need to know its width (which makes sense, because once a is dropped, the interval is [0, b-a])
+		# intervalWidth = interval.getUpper() - interval.getLower()
+		# # The algorithm aloesn't handle so dtimestamps. However, we can deterministically pre-compute those based on our input time stamps, so there's no need for it to.
+		# resultTimestamps: List[float] = droppedPrefixSignal.getTimes()[:-(intervalWidth)]
+
+
+		# # y is paper's notation for the signal's robustness (=='signal' in this function)
+		# pointwiseMaximumSignalSegments = Signal.computeOr(signal.shift(-1*interval.getLower()), signal.shift(-1*interval.getUpper())) # == " y' " from the paper
+		# # Initialize variables
+		# slidingWindowLowerBound = signal.getTime(0) - interval.getUpper() # == 's' from the paper
+		# slidingWindowUpperBound = slidingWindowLowerBound # == 't' from the paper
+		# currentIndex = 0 # == 'i' from the paper
+		# maximumCandidates: set[int] = {0}  # == 'M' from the paper
+		# output = Signal('timedEventually') # 'z' from paper
+		# while slidingWindowUpperBound + interval.getUpper() < signal.getTime(-1):
+		# 	earliestMaxCandidateLBOffsetTime = signal.getTime(min(maximumCandidates)) - interval.getLower()
+		# 	nextIndexUBOffsetTime = signal.getTime(currentIndex + 1) - interval.getUpper()
+		# 	slidingWindowUpperBound = min(earliestMaxCandidateLBOffsetTime, nextIndexUBOffsetTime)
+		# 	if slidingWindowUpperBound == earliestMaxCandidateLBOffsetTime:
+		# 		maximumCandidates.remove(min(maximumCandidates))
+		# 		slidingWindowLowerBound = slidingWindowUpperBound
+		# 	if slidingWindowUpperBound == nextIndexUBOffsetTime:
+		# 		while maximumCandidates and signal.computeInterpolatedValue(nextIndexUBOffsetTime) >= signal.getValue(max(maximumCandidates)):
+		# 			maximumCandidates.remove(max(maximumCandidates))
+		# 		currentIndex += 1
+		# 		maximumCandidates.add(currentIndex)
+		# 	if slidingWindowLowerBound >= signal.getTime(0):
+		# 	#if slidingWindowUpperBound >= signal.getTime(0):
+		# 		lowerBound = slidingWindowLowerBound #max(signal.getTime(0), slidingWindowLowerBound)
+		# 		pointwiseMaximumCurrentSignalSegment = pointwiseMaximumSignalSegments.getInterval(Interval(lowerBound, slidingWindowUpperBound), half_open=False)
+		# 		if maximumCandidates:
+		# 			maximumCandidates = Signal.createConstant('potentialMax', signal.getValue(min(maximumCandidates)), signal.getTimes())
+		# 			maximum = Signal.computeOr(pointwiseMaximumCurrentSignalSegment, maximumCandidates)
+		# 		else:
+		# 			maximumCandidates.add(currentIndex + 1)
+		# 			maximum = pointwiseMaximumCurrentSignalSegment
+		# 		for i in range(maximum.getCheckpointCount() - 1): # Exclude the limit value - we compute the open interval
+		# 			checkpoint = maximum.getCheckpoint(i)
+		# 			if checkpoint.getTime() == 23.0:
+		# 				debug = True
+		# 			if checkpoint.getTime() not in output.getTimes():
+		# 				output.addCheckpoint(checkpoint)
+		# 			else:
+		# 				toReplaceCheckpoint = output.getCheckpoint(output.computeIndexForTime(checkpoint.getTime()))
+		# 				toReplaceCheckpoint.setValue(checkpoint.getValue())
+		
+
+		# # We must also add the final point of the timedEventually operation. This is, in effect, the limit value for the final interval.
+		# # We could also compute this by closing both interval computations, but then a lot of extra computations are done in other intervals.
+		# # This solution is likely to be more efficient.
+		# lastSampleTime: float = signal.getTime(-1) - interval.getUpper()
+		# lastSampleLB: float = lastSampleTime + interval.getLower(); lastSampleUB: float = signal.getTime(-1)
+		# lastSampleInt: Interval = Interval(lastSampleLB, lastSampleUB)
+		# output.emplaceCheckpoint(
+		# 	lastSampleTime,
+		# 	max(signal.getInterval(lastSampleInt).getValues()),
+		# 	0
+		# )
+		# output.recomputeDerivatives()
+		# return output
+
 
 	# def validate(self, signals, semantic='quantitative', plot=False):
 

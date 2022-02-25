@@ -1,29 +1,16 @@
-AbsoluteValueNode:
-	When implementing this node, the values of a signal get inverted if (and only if) they're negative.
-	Take a sine wave signal, with recorded value each time the value == 1 or -1. Then we have a first checkpoint at pi/4, and then every pi/2. The derivatives for this signal are clearly non-zero.
-	Assume this signal is passed through an absolute value node, then the signal becomes, in essence, a constant. Should the derivatives be updated to reflect that?
-		Laurens' code did not do this. Mine does currently.
-		Unsure if code requiring derivatives computes them as needed.
+InequalityOperator:
+	Take signals [[0, 1], [0, 1], [1, 0]] and [[0, 1], [1, 0], [-1, 0]]
+	Should the result be [0, 1], [0, 0], [0, 0] or should we somehow account for the instantaneous equality at 0.5?
 
-QuantitativeSignalNode:
-	Looks like it is unused? Keeping it in for now, but both evaluation functions currently simply throw.
-	Why is there no requirement for semantic==quantitative?
-	In what context does a Boolean-semantic QuantitativeSignalNode make sense?
+	---> Essentially same question for all comparison operators. Pretty much all variable-valued comparison operator tests are failing currently. 
 
-BooleanFilterNode:
-	Rename to ComparisonOperatorNode?
-	Seems to convey much more clearly what the node actually is. 
-	Comments can specify that the resulting Signal will be Boolean-valued.
 
-AndNode:
-	Testing this is essentially identical to testing the calculate_and_or function, with parameter 'and'.
-	However, there's no OrNode (because it gets replaced by 'not and(not a, not b)' during parsing)
-	Does any part of the code use the or computation part of calculate_and_or? If no, wouldn't it make more sense to eliminate that function?
+RE: previous email
 
-__computeEventually:
-	Value in using this method over what we use to compute the Eventually operator in the syntax?
-	We compute the Eventually operator by adding a dummy signal to an Until node and then computing X (always true) until Y. 
-	This works, but if we have an efficient implementation of Eventually, it would make sense to replace the computation of an Eventually operator with that as well, right?
+One older version of the Efficient Robustness algorithm seems to have been very close to the solution. 
+	I've had multiple versions that seemed correct but missed either the last, the second to last, or both of these values.
+	The original algorithm has an add at the end to include the last value.
+	It also computes the open interval [s, t), so in fact, we need to add two values after the loop to fully compute the full, closed interval.
+	My implementation now does this - but it might be possible that, if I modify the efficient robustness algorithm to do that as well, that their version also works correctly. 
 
-LongAlgorithm:
-	Long algorithm switches between left and right child getTimes() for the times of z_0. Ensure this is intentional.
+Text-wise, no serious modifications yet. Work scheduled for tomorrow.
