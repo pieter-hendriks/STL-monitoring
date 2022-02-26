@@ -17,4 +17,3 @@ class Signal:
 	from ._signalOperations import computeTimedUntil, computeUntimedUntil, computeUntimedEventually
 
 	from ._signalBuiltIns import __eq__, __repr__, __str__
-
