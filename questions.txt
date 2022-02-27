@@ -1,11 +1,15 @@
 InequalityOperator:
-	Take signals [[0, 1], [0, 1], [1, 0]] and [[0, 1], [1, 0], [-1, 0]]
-	Should the result be [0, 1], [0, 0], [0, 0] or should we somehow account for the instantaneous equality at 0.5?
+		Take signals [[0, 1], [0, 1], [1, 0]] and [[0, 1], [1, 0], [-1, 0]]
+		Should the result be [0, 1], [0, 0], [0, 0] or should we somehow account for the instantaneous equality at 0.5?
 
-	---> Essentially same question for all comparison operators. Pretty much all variable-valued comparison operator tests are failing currently. 
+		---> Essentially same question for all comparison operators. Pretty much all variable-valued comparison operator tests are failing currently. 
 
+			==> Account for instantaneous equality at 0.5; we should have the extra point be a truth (@ 0.5) and ascend & descend accordingly. 
 
-RE: previous email
+Text -- Input:
+	Do signals input into the program have to be defined for all \tau \in t?
+	We define the robustness \rho(\phi, w, t) for some trace w and some timestamps t -- Are signals in W required to have values for all times in T? 
+
 
 One older version of the Efficient Robustness algorithm seems to have been very close to the solution. 
 	I've had multiple versions that seemed correct but missed either the last, the second to last, or both of these values.
