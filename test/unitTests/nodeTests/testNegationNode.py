@@ -2,7 +2,7 @@ import unittest
 import unittest.mock as mock
 from stl.tree import NegationNode
 from stl.signals import Signal, BooleanSignal
-from stl.tree.nodes.formulanodes.booleanfilternode import BooleanFilterNode
+from stl.tree.nodes.formulanodes.comparisonoperatornode import ComparisonOperatorNode
 from .testUnaryOperation import UnaryOperationTest
 from .helpers import getCosSignal
 

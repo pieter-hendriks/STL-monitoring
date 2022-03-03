@@ -2,11 +2,11 @@ import unittest
 import unittest.mock as mock
 from .helpers import getCosSignal, getShiftedCosSignal
 from stl.signals.signalvalue import SignalValue
-from .testBooleanFilterNode import BooleanFilterNodeTest
+from .testBooleanFilterNode import ComparisonOperatorNodeTest
 from stl.signals import Signal, BooleanSignal, SignalValue
 import math
 
-class BooleanFilterNodeLesserThanOrEqualToTest(BooleanFilterNodeTest):
+class BooleanFilterNodeLessThanOrEqualToTest(ComparisonOperatorNodeTest):
 	def setUp(self):
 		super().setUp()
 		self.node.processToken('<=')
@@ -51,25 +51,27 @@ class BooleanFilterNodeLesserThanOrEqualToTest(BooleanFilterNodeTest):
 
 	def testVariableSignals(self):
 		s1 = getCosSignal(10, booleanSignal = False)
-		s2 = getShiftedCosSignal(10, booleanSignal = False)
-		rs = Signal("comparison", [x for x in range(10)] + [9.5], [1] * 11, [0] * 11)
+		rs = Signal("comparison", [x for x in range(10)] + [9.5], [1] * 11); rs.recomputeDerivatives()
 		self.quantitativeValidationTestHelper(s1, s1, rs)
-		lastElement = SignalValue(9.5, 1, 0)
-		rs = Signal("comparison", [x for x in range(10)], [i % 2 for i in range(10)], [0] * 10)
+
+		lastElement: SignalValue = SignalValue(9.5, 1, 0)
+		s2 = getShiftedCosSignal(10, booleanSignal = False)
+		rs = Signal("comparison", [x/10 for x in range(0, 95, 5)], [0, 1, 1, 1] * 5)
 		rs.addCheckpoint(lastElement)
 		rs.recomputeDerivatives()
 		self.quantitativeValidationTestHelper(s1, s2, rs)
 		rs.popCheckpoint()
-		rs = Signal('comparison', rs.getTimes(), [1 if i == 0 else 0 for i in rs.getValues()], [-x for x in rs.getDerivatives()])
+		rs = Signal('comparison', rs.getTimes(), [1, 1, 0, 1] * 5)
 		rs.addCheckpoint(lastElement)
 		rs.recomputeDerivatives()
 		self.quantitativeValidationTestHelper(s2, s1, rs)
 
 		s1 = BooleanSignal.fromSignal(s1)
 		s2 = BooleanSignal.fromSignal(s2)
-		rs = BooleanSignal.fromSignal(rs)
+		rs = BooleanSignal('comparison', s1.getTimes(), [(i+1)%2 for i in range(10)])
+		rs.addCheckpoint(lastElement)
 		self.booleanValidationTestHelper(s2, s1, rs)
-		rs = BooleanSignal("comparison", [x for x in range(10)], [i % 2 for i in range(10)], [0] * 10)
+		rs = BooleanSignal("comparison", [x for x in range(10)], [i % 2 for i in range(10)])
 		rs.addCheckpoint(lastElement)
 		self.booleanValidationTestHelper(s1, s2, rs)
 		rs = BooleanSignal("comparison", [x for x in range(10)] + [9.5], [1] * 11, [0] * 11)

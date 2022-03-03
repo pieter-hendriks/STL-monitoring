@@ -13,7 +13,7 @@ class Interval:
 	def getUpper(self) -> float:
 		""" Get the upper limit of the interval. """
 		return self.upperLimit
-
+		
 	@classmethod
 	def computeIntersection(cls, lhs: 'Interval', rhs: 'Interval') -> 'Interval':
 		""" Compute the intersection between the two intervals.\n\nFor intervals [a, b] and [c,d], this is [max(a,c), min(b,d)]."""

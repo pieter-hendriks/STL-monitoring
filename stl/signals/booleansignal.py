@@ -1,6 +1,7 @@
 from .signal import Signal
-from typing import List
+from typing import List, Tuple
 from .signalvalue import SignalValue
+from ..utility import Interval
 
 def booleanize(value: float):
 	return 1 if value > 0 else 0
@@ -47,6 +48,13 @@ class BooleanSignal(Signal):
 		for cp in self.checkpoints:
 			cp.setDerivative(0)
 
+	def computeInterpolatedDerivative(self, t: float) -> float:
+		return 0
+
+	def computeInterpolatedValue(self, t: float) -> float:
+		i: int = self.computeIndexForLargestTimeBefore(t)
+		return self.getValue(i)
+
 	@classmethod
 	def fromSignal(cls, s: Signal):
 		# Get the components of the original Signal
@@ -56,3 +64,8 @@ class BooleanSignal(Signal):
 		times, values, derivatives = zip(*[(cp.getTime(), cp.getValue(), cp.getDerivative()) for cp in s.checkpoints])
 		# Drop the derivatives, BooleanSignal doesn't use those.
 		return cls(s.getName(), times, values, [0] * len(derivatives))
+
+	@classmethod
+	def computeComparableSignals(cls, lhs: 'BooleanSignal', rhs: 'BooleanSignal') -> Tuple['BooleanSignal', 'BooleanSignal']:
+		lhs, rhs = BooleanSignal.computeCheckpointsForComparableSignal(lhs, rhs)
+		return lhs, rhs

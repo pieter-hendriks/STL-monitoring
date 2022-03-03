@@ -1,5 +1,5 @@
 from .andnode import AndNode
-from .booleanfilternode import BooleanFilterNode
+from .comparisonoperatornode import ComparisonOperatorNode
 from .formulanode import FormulaNode
 from .negationnode import NegationNode
 from .quantitativesignalnode import QuantitativeSignalNode

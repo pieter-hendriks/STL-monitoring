@@ -29,8 +29,9 @@ class BinaryOperationNode(OperationNode):
 		else: 
 			raise RuntimeError(f"Unknown operation found for BinaryOperationNode: '{token}'")
 		self.operationName = token
+
 	def text(self):
-		return self.operatorName
+		return self.operationName
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
 		childResults = SignalList(Signal.computeComparableSignals(self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)))
@@ -41,13 +42,14 @@ class BinaryOperationNode(OperationNode):
 		assert type(childResults[0]) == BooleanSignal
 		return self.__operationImplementation(childResults[0], childResults[1])
 		
-	def __operationImplementation(self, leftChildSignal: Union[Signal, BooleanSignal], rightChildSignal: Union[Signal, BooleanSignal]) -> Union[Signal, BooleanSignal]:
+	def __operationImplementation(self, leftChildSignal: Signal, rightChildSignal: Signal) -> Signal:
+		""" Implementation of the binary operations. Uses the node's configured operation to compute the correct result. Operation is configured by processToken. """
 		# We either work on two booleans or two quantitatives. One and one is non-sensical.
 		# A Quantitative signal may contain only boolean values, but that does not make it a Boolean-semantic signal.
 		assert type(leftChildSignal) == type(rightChildSignal) 
 		assert type(leftChildSignal) in [Signal, BooleanSignal]
-		returnType = type(leftChildSignal)
-		ret: Union[Signal, BooleanSignal] = returnType(self.resultChildName)
+		signalType = type(leftChildSignal)
+		ret: Signal = signalType(self.resultChildName)
 		for i in range(leftChildSignal.getCheckpointCount()):
 			computedValue = self.operation(leftChildSignal.getValue(i), rightChildSignal.getValue(i))
 			ret.emplaceCheckpoint(leftChildSignal.getTime(i), computedValue)

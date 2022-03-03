@@ -13,9 +13,9 @@ if __name__ == "__main__":
 	# if argv[1] not in ['cartpole', 'all', 'fast']:
 	# 	print("Invalid parameter passed.\nValid is no parameter(=fast), 'fast', 'all' or 'cartpole'.")
 	# 	exit(1)
-	# from test.unitTests import *
+	from test.unitTests import *
 	# warnings.warn("Only have the until node tests enabled to limit output!")
-	from test.unitTests.nodeTests.testUntilNode import UntilNodeTest
+	# from test.unitTests.nodeTests.testUntilNode import UntilNodeTest
 	try:
 		unittest.main()
 	except SystemExit:

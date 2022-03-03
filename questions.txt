@@ -14,3 +14,26 @@ One older version of the Efficient Robustness algorithm seems to have been very 
 	My implementation now does this - but it might be possible that, if I modify the efficient robustness algorithm to do that as well, that their version also works correctly. 
 
 Text-wise, no serious modifications yet. Work scheduled for tomorrow.
+
+
+
+Maintain compatibility for boolean semantics?
+	Current version of the code breaks it, I think. BooleanSignal implementation is incomplete
+
+Similar problem in Multiplication etc that we saw in comparison operators:
+	Multiplying [[0,1], [0,1]] and [[0, 1], [1, 0]] resulted in [[0, 1], [0,0]] but should have been [[0, 0.5, 1], [0, 0.25, 0]]
+
+	Why do we even have multiplication/division/sum/subtract(difference) implementations?
+		These are not part of the STL syntax (as far as I know) and seemingly only serve to make the implementation more complex.
+
+Test comparison function:
+	Checking if a certain value is colinear with the ones present in the expected result (maybe?) works for some operators. Division operator, I think, breaks it though. 
+	Any division of signal/signal is not going to be a linear function anymore so the FPLC assumption is broken.
+
+Can I just use a derivative recomputation method to fix generated test data? 
+	Long method only misses on derivatives - but seems to be correct.
+	Example output of failure currently:
+		AssertionError: Mismatch!
+        Expected: SignalValue<T=0.0,V=0.058826673,D=0.0>
+        Received: SignalValue<T=0.0,V=0.058826673,D=0.13588571600000002>
+		where for T=1.0, the next value is (in both solutions): 0.194712389

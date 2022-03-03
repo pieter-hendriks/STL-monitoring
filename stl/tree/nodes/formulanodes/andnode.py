@@ -1,5 +1,8 @@
 from .formulanode import FormulaNode
 from ....signals import Signal, BooleanSignal, SignalList
+
+from ....operators import computeAnd
+
 class AndNode(FormulaNode):
 	def __init__(self):
 		super().__init__()
@@ -8,7 +11,7 @@ class AndNode(FormulaNode):
 		result: Signal = Signal('and')
 		lhs: Signal; rhs: Signal
 		lhs, rhs = self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)
-		result = Signal.computeAnd(lhs, rhs)
+		result = computeAnd(lhs, rhs)
 		if plot:
 			self.quantitativePlot(result)
 		result.recomputeDerivatives()

@@ -95,7 +95,7 @@ class CustomStlListener(stlListener):
 
 	# Enter a parse tree produced by stlParser#booleanFilter.
 	def enterBooleanFilter(self, ctx: stlParser.BooleanFilterContext):
-		self.generateBranch(BooleanFilterNode(), ctx)
+		self.generateBranch(ComparisonOperatorNode(), ctx)
 
 	# Exit a parse tree produced by stlParser#booleanFilter.
 	def exitBooleanFilter(self, ctx: stlParser.BooleanFilterContext):

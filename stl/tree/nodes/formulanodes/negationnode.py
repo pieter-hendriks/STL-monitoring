@@ -1,8 +1,11 @@
 from .formulanode import FormulaNode
 from ....signals import Signal, BooleanSignal, SignalList
+from ....operators import computeNot
+
 class NegationNode(FormulaNode):
 	def __init__(self):
 		super().__init__()
+
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
 		childResult = self.children[0].booleanValidate(signals, plot)
@@ -12,8 +15,9 @@ class NegationNode(FormulaNode):
 		return result
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
-		result = self.children[0].quantitativeValidate(signals, plot)
-		temp = Signal('negation', result.getTimes(), [-x for x in result.getValues()], [-x for x in result.getDerivatives()])
+		childResult: Signal = self.children[0].quantitativeValidate(signals, plot)
+		myResult: Signal = computeNot(childResult)
+		myResult.setName("negation")
 		if plot:
-			self.quantitativePlot(temp)
-		return temp
+			self.quantitativePlot(myResult)
+		return myResult

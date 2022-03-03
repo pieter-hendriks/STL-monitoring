@@ -1,12 +1,12 @@
 import unittest
 import unittest.mock as mock
-from stl.tree import BooleanFilterNode
+from stl.tree import ComparisonOperatorNode
 from stl.signals import Signal, BooleanSignal
 from .testBinaryOperation import BinaryOperationTest
 
-class BooleanFilterNodeTest(BinaryOperationTest):
+class ComparisonOperatorNodeTest(BinaryOperationTest):
 	def setUp(self):
-		self.node: BooleanFilterNode = BooleanFilterNode()
+		self.node: ComparisonOperatorNode = ComparisonOperatorNode()
 		super().setUp()
 
 
