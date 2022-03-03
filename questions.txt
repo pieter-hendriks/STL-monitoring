@@ -1,21 +1,6 @@
-InequalityOperator:
-	Take signals [[0, 1], [0, 1], [1, 0]] and [[0, 1], [1, 0], [-1, 0]]
-	Should the result be [0, 1], [0, 0], [0, 0] or should we somehow account for the instantaneous equality at 0.5?
-
-	---> Essentially same question for all comparison operators. Pretty much all variable-valued comparison operator tests are failing currently. 
-
-
-RE: previous email
-
-One older version of the Efficient Robustness algorithm seems to have been very close to the solution. 
-	I've had multiple versions that seemed correct but missed either the last, the second to last, or both of these values.
-	The original algorithm has an add at the end to include the last value.
-	It also computes the open interval [s, t), so in fact, we need to add two values after the loop to fully compute the full, closed interval.
-	My implementation now does this - but it might be possible that, if I modify the efficient robustness algorithm to do that as well, that their version also works correctly. 
-
-Text-wise, no serious modifications yet. Work scheduled for tomorrow.
-
-
+Text -- Input:
+	Do signals input into the program have to be defined for all \tau \in t?
+	We define the robustness \rho(\phi, w, t) for some trace w and some timestamps t -- Are signals in W required to have values for all times in T? 
 
 Maintain compatibility for boolean semantics?
 	Current version of the code breaks it, I think. BooleanSignal implementation is incomplete
@@ -29,6 +14,7 @@ Similar problem in Multiplication etc that we saw in comparison operators:
 Test comparison function:
 	Checking if a certain value is colinear with the ones present in the expected result (maybe?) works for some operators. Division operator, I think, breaks it though. 
 	Any division of signal/signal is not going to be a linear function anymore so the FPLC assumption is broken.
+	There may be more such cases - are there any alternatives?
 
 Can I just use a derivative recomputation method to fix generated test data? 
 	Long method only misses on derivatives - but seems to be correct.
