@@ -29,6 +29,7 @@ class Interval:
 		return self.getLower() <= value < self.getUpper()
 	
 	def isSingular(self) -> bool:
+		""" Checks if the Interval is singular (upper == lower)"""
 		return self.getLower() == self.getUpper()
 
 	def __eq__(self, other: 'Interval') -> bool:

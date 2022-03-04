@@ -18,8 +18,21 @@ Test comparison function:
 
 Can I just use a derivative recomputation method to fix generated test data? 
 	Long method only misses on derivatives - but seems to be correct.
+
+	This one, I'm fairly sure is an error in test data.
 	Example output of failure currently:
 		AssertionError: Mismatch!
         Expected: SignalValue<T=0.0,V=0.058826673,D=0.0>
         Received: SignalValue<T=0.0,V=0.058826673,D=0.13588571600000002>
 		where for T=1.0, the next value is (in both solutions): 0.194712389
+
+	If I correct the testdata derivatives, however, I continue encountering derivative errors through added points. 
+	Other example is slightly more involved:
+		AssertionError: Mismatch!
+			Expected: SignalValue<T=178.0,V=0.99981013,D=-0.015274425999999952>
+			Received: SignalValue<T=178.0,V=0.99981013,D=-4.835353860126477>
+		Next Checkpoint:
+			Expected: SignalValue<T=179.0,V=0.984535704,D=-0.01934962100000004>
+			Received: SignalValue<T=179.0,V=0.984535704,D=-0.01934962100000004>
+		Obtained Signal has following next cp: 
+			SignalValue<T=178.05620414148459,V=0.7280432175174169,D=0.2717669124825831>
