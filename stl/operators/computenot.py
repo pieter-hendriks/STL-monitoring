@@ -5,4 +5,5 @@ def computeNot(signal: Signal) -> Signal:
 	output = signalType('not')
 	for cp in signal.getCheckpoints():
 		output.emplaceCheckpoint(cp.getTime(), cp.getValue() * -1, cp.getDerivative() * -1)
+	output.recomputeDerivatives()
 	return output
