@@ -47,79 +47,92 @@ class UntilNode(FormulaNode):
 		output.simplify()
 		return output
 
-	def quantitativeValidate(self, signals: SignalList, plot: bool = False) -> Signal:
-		if not self.__useSyntaxAlgorithm:
-			if len(self.children) == 1:
-				# Untimed eventually -- no time interval children, 1 signal child
-				result = computeUntimedEventually(self.children[0].quantitativeValidate(signals, plot))
-			elif len(self.children) == 2:
-				# Untimed Until -- no time interval children, 2 signal children ( two time interval and no signal isn't a possibility)
-				result = computeUntimedUntil(
+	def __handleEfficientAlgorithm(self, signals: SignalList, plot: bool) -> Signal:
+		if len(self.children) == 1:
+			# Untimed eventually -- no time interval children, 1 signal child
+			result = computeUntimedEventually(self.children[0].quantitativeValidate(signals, plot))
+		elif len(self.children) == 2:
+			# Untimed Until -- no time interval children, 2 signal children ( two time interval and no signal isn't a possibility)
+			result = computeUntimedUntil(
+			    self.children[0].quantitativeValidate(signals, plot),
+			    self.children[1].quantitativeValidate(signals, plot)
+			)
+		elif len(self.children) >= 3:
+			interval: Interval = Interval(
+			    self.children[-3].quantitativeValidate(signals, plot).getValue(0),
+			    self.children[-2].quantitativeValidate(signals, plot).getValue(0)
+			)
+			if len(self.children) == 4:  # timed until, 2 time interval children, 2 signal children
+				result = computeTimedUntil(
 				    self.children[0].quantitativeValidate(signals, plot),
-				    self.children[1].quantitativeValidate(signals, plot)
+				    self.children[3].quantitativeValidate(signals, plot), interval
 				)
-			elif len(self.children) >= 3:
-				interval: Interval = Interval(
-				    self.children[-3].quantitativeValidate(signals, plot).getValue(0),
-				    self.children[-2].quantitativeValidate(signals, plot).getValue(0)
+			else:
+				# Timed eventually - 2 time interval children, 1 signal child (time interval must always be exactly 0 or exactly 2, so this is only option)
+				result = computeTimedEventually(
+				    self.children[-1].quantitativeValidate(signals, plot), interval
 				)
-				if len(self.children) == 4:  # timed until, 2 time interval children, 2 signal children
-					result = computeTimedUntil(
-					    self.children[0].quantitativeValidate(signals, plot),
-					    self.children[3].quantitativeValidate(signals, plot), interval
-					)
-				else:
-					# Timed eventually - 2 time interval children, 1 signal child (time interval must always be exactly 0 or exactly 2, so this is only option)
-					result = computeTimedEventually(
-					    self.children[-1].quantitativeValidate(signals, plot), interval
-					)
-			result.recomputeDerivatives()
-			result.simplify()
-			return result
+		return result
 
-		# TODO:
-		# Code here needs some cleaning. The efficient algorithm's implementation now neatly handles all operators without needing any of the below code.
-		# The syntax algorithm, however, may need to interval to be present, so may not operate at all if we have e.g. 1 or 2 children.
-		# For now, to avoid dealing with that issue, I've left the code below unchanged for the short algorithm.
-		# In case any long algorithm call is hit, it will assert False.
-
-		warnings.warn("Falling back to old behaviour for short algorithm. Please fix.")
-
-		# Check if one or two formula nodes as children, if one -> add true signal
+	def __handleSyntaxAlgorithm(self, signals: SignalList, plot: bool) -> Signal:
+		# If we have four children, we have a timed until operation (lhs, interval (lower & upper), rhs)
 		if len(self.children) == 4:
+			childResults: SignalList = SignalList(
+			    Signal.computeComparableSignals(
+			        self.children[0].quantitativeValidate(signals, plot),
+			        self.children[3].quantitativeValidate(signals, plot)
+			    )
+			)
+		# If we have three children, we have a timed eventually operation (interval (lower & upper), rhs)
+		elif len(self.children) == 3:
+			childResults: SignalList = SignalList(
+			    [
+			        Signal.createConstant('DummyTrueSignal', 0),
+			        self.children[2].quantitativeValidate(signals, plot)
+			    ]
+			)
+		# If we have two children, we have an untimed until operation (lhs, rhs)
+		elif len(self.children) == 2:
 			childResults: SignalList = SignalList(
 			    [
 			        self.children[0].quantitativeValidate(signals, plot),
-			        self.children[3].quantitativeValidate(signals, plot)
+			        self.children[1].quantitativeValidate(signals, plot)
 			    ]
 			)
-			childResults = SignalList(Signal.computeComparableSignals(childResults[0], childResults[1]))
-		elif len(self.children) == 3:
-			# Eventually: EVENTUALLY[a, b] <SIGNAL>: a = children[0]/[-3], b = [1]/[-2], signal = [2]/[-1]
-			# This is the 'eventually' operation == '<TRUE> Until[a,b] <signal>'
-			childResult: Signal = self.children[2].quantitativeValidate(signals, plot)
-			dummySignal: Signal = Signal(
-			    "DummyTrueSignal", childResult.getTimes(), [1] * childResult.getCheckpointCount(),
-			    [0] * childResult.getCheckpointCount()
+		# Else we must have 1 child, which is the untimed eventually operation (rhs)
+		else:
+			assert len(self.children) == 1, "Invalid amount of children for until node."
+			childResults: SignalList = SignalList(
+			    [
+			        Signal.createConstant('DummyTrueSignal', 0),
+			        self.children[0].quantitativeValidate(signals, plot)
+			    ]
 			)
-			childResults: SignalList = SignalList([dummySignal, childResult])
+		# Get the interval limit values for the interval [a, b]
+		# Untimed operation
+		aSignal: Signal = Signal.createConstant('a', 0)
+		bSignal: Signal = Signal.createConstant('b', float('inf'))
+		if len(self.children) >= 3:
+			# Timed operation
+			aSignal: Signal = self.children[-3].quantitativeValidate(signals, plot)
+			bSignal: Signal = self.children[-2].quantitativeValidate(signals, plot)
 
 		size = childResults[0].getCheckpointCount()
-		# Get the interval limit values for the interval [a, b]
-		aSignal: Signal = self.children[-3].quantitativeValidate(signals, plot)
-		bSignal: Signal = self.children[-2].quantitativeValidate(signals, plot)
-		assert aSignal.getCheckpointCount() == bSignal.getCheckpointCount(
-		) == 1, f"Ambiguous interval sizes. These should be from ValueNodes, which return a single-value Signal."
+		assert all([x == s.getValue(0) for s in [aSignal, bSignal] for x in s.getValues()])
 		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
-		if self.__useSyntaxAlgorithm:
-			until = self.syntaxAlgorithm(size, childResults, interval)
+		result = self.syntaxAlgorithm(size, childResults, interval)
+		return result
+
+	def quantitativeValidate(self, signals: SignalList, plot: bool = False) -> Signal:
+		if not self.__useSyntaxAlgorithm:
+			result: Signal = self.__handleEfficientAlgorithm(signals, plot)
 		else:
-			# TODO: Remove this once the above has been corrected.
-			assert False, "This should be unreachable since recent changes. See TODO/warning above."
-			#until = self.longAlgorithm(size, childResults, interval)
+			result: Signal = self.__handleSyntaxAlgorithm(signals, plot)
+		result.recomputeDerivatives()
+		result.simplify()
 		if plot:
-			self.quantitativePlot(until)
-		return until
+			self.quantitativePlot(result)
+		return result
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
 		# Operator can be unary or binary;
