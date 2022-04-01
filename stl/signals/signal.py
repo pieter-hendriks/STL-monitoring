@@ -192,8 +192,6 @@ class Signal:
 			# value += (self.getValue(i) - self.getValue(i - 1)
 			#           ) / ((self.getTime(i) - self.getTime(i - 1)) * t - self.getTime(i - 1))
 			ret = value  # Get the value of a signal at time step t
-		if ret == 138266560272.4535:
-			ret = 138266560272.4535
 		return ret
 
 	# Get a derivative of the signal at time step t

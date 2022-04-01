@@ -13,8 +13,6 @@ class SignalValue:
 		if derivative is None:
 			warnings.warn("SignalValue is auto-assigning derivative = 0 where it was None.")
 			self.derivative = 0
-		if self.value == 138266560272.4535:
-			self.value = 138266560272.4535
 
 	def getTime(self) -> float:
 		return self.timestamp
