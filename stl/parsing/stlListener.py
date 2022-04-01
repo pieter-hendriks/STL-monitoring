@@ -1,10 +1,9 @@
-# Generated from stl.g4 by ANTLR 4.9.2
-from antlr4 import *  # pylint: disable=unused-wildcard-import
-# pylint: disable=relative-beyond-top-level
+# Generated from stl.g4 by ANTLR 4.9.3
+from antlr4 import *
 if __name__ is not None and "." in __name__:
 	from .stlParser import stlParser
 else:
-	from stl.parsing.stlParser import stlParser
+	from stlParser import stlParser
 
 
 # This class defines a complete listener for a parse tree produced by stlParser.
@@ -16,14 +15,6 @@ class stlListener(ParseTreeListener):
 
 	# Exit a parse tree produced by stlParser#content.
 	def exitContent(self, ctx: stlParser.ContentContext):
-		pass
-
-	# Enter a parse tree produced by stlParser#always.
-	def enterAlways(self, ctx: stlParser.AlwaysContext):
-		pass
-
-	# Exit a parse tree produced by stlParser#always.
-	def exitAlways(self, ctx: stlParser.AlwaysContext):
 		pass
 
 	# Enter a parse tree produced by stlParser#booleanFilter.
@@ -48,6 +39,38 @@ class stlListener(ParseTreeListener):
 
 	# Exit a parse tree produced by stlParser#or.
 	def exitOr(self, ctx: stlParser.OrContext):
+		pass
+
+	# Enter a parse tree produced by stlParser#untimedEventually.
+	def enterUntimedEventually(self, ctx: stlParser.UntimedEventuallyContext):
+		pass
+
+	# Exit a parse tree produced by stlParser#untimedEventually.
+	def exitUntimedEventually(self, ctx: stlParser.UntimedEventuallyContext):
+		pass
+
+	# Enter a parse tree produced by stlParser#untimedUntil.
+	def enterUntimedUntil(self, ctx: stlParser.UntimedUntilContext):
+		pass
+
+	# Exit a parse tree produced by stlParser#untimedUntil.
+	def exitUntimedUntil(self, ctx: stlParser.UntimedUntilContext):
+		pass
+
+	# Enter a parse tree produced by stlParser#timedEventually.
+	def enterTimedEventually(self, ctx: stlParser.TimedEventuallyContext):
+		pass
+
+	# Exit a parse tree produced by stlParser#timedEventually.
+	def exitTimedEventually(self, ctx: stlParser.TimedEventuallyContext):
+		pass
+
+	# Enter a parse tree produced by stlParser#timedUntil.
+	def enterTimedUntil(self, ctx: stlParser.TimedUntilContext):
+		pass
+
+	# Exit a parse tree produced by stlParser#timedUntil.
+	def exitTimedUntil(self, ctx: stlParser.TimedUntilContext):
 		pass
 
 	# Enter a parse tree produced by stlParser#quantitativeSignal.
@@ -82,20 +105,20 @@ class stlListener(ParseTreeListener):
 	def exitScope(self, ctx: stlParser.ScopeContext):
 		pass
 
-	# Enter a parse tree produced by stlParser#eventually.
-	def enterEventually(self, ctx: stlParser.EventuallyContext):
+	# Enter a parse tree produced by stlParser#timedAlways.
+	def enterTimedAlways(self, ctx: stlParser.TimedAlwaysContext):
 		pass
 
-	# Exit a parse tree produced by stlParser#eventually.
-	def exitEventually(self, ctx: stlParser.EventuallyContext):
+	# Exit a parse tree produced by stlParser#timedAlways.
+	def exitTimedAlways(self, ctx: stlParser.TimedAlwaysContext):
 		pass
 
-	# Enter a parse tree produced by stlParser#until.
-	def enterUntil(self, ctx: stlParser.UntilContext):
+	# Enter a parse tree produced by stlParser#untimedAlways.
+	def enterUntimedAlways(self, ctx: stlParser.UntimedAlwaysContext):
 		pass
 
-	# Exit a parse tree produced by stlParser#until.
-	def exitUntil(self, ctx: stlParser.UntilContext):
+	# Exit a parse tree produced by stlParser#untimedAlways.
+	def exitUntimedAlways(self, ctx: stlParser.UntimedAlwaysContext):
 		pass
 
 	# Enter a parse tree produced by stlParser#signalAbsolute.
@@ -107,15 +130,11 @@ class stlListener(ParseTreeListener):
 		pass
 
 	# Enter a parse tree produced by stlParser#signalExpressionScope.
-	def enterSignalExpressionScope(
-	    self, ctx: stlParser.SignalExpressionScopeContext
-	):
+	def enterSignalExpressionScope(self, ctx: stlParser.SignalExpressionScopeContext):
 		pass
 
 	# Exit a parse tree produced by stlParser#signalExpressionScope.
-	def exitSignalExpressionScope(
-	    self, ctx: stlParser.SignalExpressionScopeContext
-	):
+	def exitSignalExpressionScope(self, ctx: stlParser.SignalExpressionScopeContext):
 		pass
 
 	# Enter a parse tree produced by stlParser#signalProduct.
@@ -213,6 +232,3 @@ class stlListener(ParseTreeListener):
 	# Exit a parse tree produced by stlParser#floatValue.
 	def exitFloatValue(self, ctx: stlParser.FloatValueContext):
 		pass
-
-
-del stlParser

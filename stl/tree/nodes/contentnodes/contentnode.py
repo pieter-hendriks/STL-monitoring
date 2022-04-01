@@ -1,17 +1,19 @@
 from ..node import Node
-import matplotlib.pyplot as plt
-from ....utility import cm2inch, PlotHelper
-from ....signals import SignalList
-from typing import Union
+from ....utility import PlotHelper
+from ....signals import SignalList, Signal
+
 
 class ContentNode(Node):
+
 	def __init__(self):
 		super().__init__()
 
-	def validate(self, signals: SignalList, semantic: str = 'quantitative', plot: bool = False) -> Union[bool, float]:
+	def validate(
+	    self, signals: SignalList, semantic: str = 'quantitative', plot: bool = False
+	) -> Signal:
 		assert semantic in ['boolean', 'quantitative']
 		# Create subplots
-		if plot:  
+		if plot:
 			plotAmount = self.calculatePlotAmount()
 			PlotHelper().createSubplots(plotAmount)
 		# Make sure we use the correct child functions based on current semantics

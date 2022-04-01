@@ -74,6 +74,7 @@ def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
 			# Timestamp = windowLowerBound (==segmentUpperBound - windowWidth) (e.g. for signal ([0, 10], [0, 1]) with windowSize 0.5, a sample with value 1 at timestep 9.5 must be created)
 			out.emplaceCheckpoint(currentWindowLowerBound, maximumCandidates[0].getValue(), 0)
 	out.recomputeDerivatives()
+	out.simplify()
 	return out
 
 

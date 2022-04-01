@@ -1,4 +1,4 @@
-# Generated from stl.g4 by ANTLR 4.7.2
+# Generated from stl.g4 by ANTLR 4.9.3
 # pylint: disable=unused-wildcard-import
 from antlr4 import *
 from antlr4 import TerminalNode
@@ -14,6 +14,7 @@ else:
 
 # This class defines a complete listener for a parse tree produced by stlParser.
 class CustomStlListener(stlListener):
+
 	def __init__(self):
 		self.stlTree = None
 
@@ -49,15 +50,13 @@ class CustomStlListener(stlListener):
 
 		if token in '[]{}();,':  # Ignore these tokens
 			return
-		self.stlTree.processToken(
-		    token
-		)  # Put the value of the token into a variable to use later on
+		self.stlTree.processToken(token)  # Put the value of the token into a variable to use later on
 
 	# Go back up the tree
 	def popStack(self):
 		# If node = negation and child too -> simplify
-		if isinstance(self.stlTree, NegationNode
-		              ) and isinstance(self.stlTree.children[0], NegationNode):
+		if isinstance(self.stlTree,
+		              NegationNode) and isinstance(self.stlTree.children[0], NegationNode):
 			self.stlTree.parent.add(self.stlTree.children[0].children[0])
 			self.stlTree.parent.children.remove(self.stlTree)
 			self.stlTree.children[0].children[0].parent = self.stlTree.parent
@@ -81,15 +80,24 @@ class CustomStlListener(stlListener):
 		self.popStack()
 
 	# Enter a parse tree produced by stlParser#always.
-	def enterAlways(
-	    self, ctx: stlParser.AlwaysContext
-	):  # □a := ¬◊¬a := ¬(true U ¬a)
+	def enterTimedAlways(self, ctx: stlParser.TimedAlwaysContext):  # □a := ¬◊¬a := ¬(true U ¬a)
 		self.generateBranch(NegationNode(), ctx)
 		self.generateBranch(UntilNode(), ctx)
 		self.stlTree.negateNext = True  # Indicate that the formula children of the until node have to be negated
 
 	# Exit a parse tree produced by stlParser#always.
-	def exitAlways(self, ctx: stlParser.AlwaysContext):
+	def exitTimedAlways(self, ctx: stlParser.TimedAlwaysContext):
+		self.popStack()  # Leave the Until node
+		self.popStack()  # Leave the Negation node
+
+	# Enter a parse tree produced by stlParser#always.
+	def enterUntimedAlways(self, ctx: stlParser.UntimedAlwaysContext):  # □a := ¬◊¬a := ¬(true U ¬a)
+		self.generateBranch(NegationNode(), ctx)
+		self.generateBranch(UntilNode(), ctx)
+		self.stlTree.negateNext = True  # Indicate that the formula children of the until node have to be negated
+
+	# Exit a parse tree produced by stlParser#always.
+	def exitUntimedAlways(self, ctx: stlParser.UntimedAlwaysContext):
 		self.popStack()  # Leave the Until node
 		self.popStack()  # Leave the Negation node
 
@@ -136,9 +144,7 @@ class CustomStlListener(stlListener):
 		self.popStack()
 
 	# Enter a parse tree produced by stlParser#implication.
-	def enterImplication(
-	    self, ctx: stlParser.ImplicationContext
-	):  # a→b := ¬a∨b := ¬(a∧¬b)
+	def enterImplication(self, ctx: stlParser.ImplicationContext):  # a→b := ¬a∨b := ¬(a∧¬b)
 		self.generateBranch(NegationNode(), ctx)
 		self.generateBranch(AndNode(), ctx)
 		self.stlTree.negateNext = 2  # Indicate that the second child of the and node has to be negated
@@ -154,27 +160,39 @@ class CustomStlListener(stlListener):
 		pass
 
 	# Exit a parse tree produced by stlParser#scope.
-	def exitScope(
-	    self, ctx: stlParser.ScopeContext
-	):  # Only here to make the tree in the right shape
+	def exitScope(self, ctx: stlParser.ScopeContext):  # Only here to make the tree in the right shape
 		pass
 
 	# Enter a parse tree produced by stlParser#eventually.
-	def enterEventually(
-	    self, ctx: stlParser.EventuallyContext
-	):  # ◊a := true U a
+	def enterTimedEventually(self, ctx: stlParser.TimedEventuallyContext):  # ◊a := true U a
 		self.generateBranch(UntilNode(), ctx)
 
 	# Exit a parse tree produced by stlParser#eventually.
-	def exitEventually(self, ctx: stlParser.EventuallyContext):
+	def exitTimedEventually(self, ctx: stlParser.TimedEventuallyContext):
+		self.popStack()
+
+	# Enter a parse tree produced by stlParser#eventually.
+	def enterUntimedEventually(self, ctx: stlParser.UntimedEventuallyContext):  # ◊a := true U a
+		self.generateBranch(UntilNode(), ctx)
+
+	# Exit a parse tree produced by stlParser#eventually.
+	def exitUntimedEventually(self, ctx: stlParser.UntimedEventuallyContext):
 		self.popStack()
 
 	# Enter a parse tree produced by stlParser#until.
-	def enterUntil(self, ctx: stlParser.UntilContext):
+	def enterTimedUntil(self, ctx: stlParser.TimedUntilContext):
 		self.generateBranch(UntilNode(), ctx)
 
 	# Exit a parse tree produced by stlParser#until.
-	def exitUntil(self, ctx: stlParser.UntilContext):
+	def exitTimedUntil(self, ctx: stlParser.TimedUntilContext):
+		self.popStack()
+
+	# Enter a parse tree produced by stlParser#until.
+	def enterUntimedUntil(self, ctx: stlParser.UntimedUntilContext):
+		self.generateBranch(UntilNode(), ctx)
+
+	# Exit a parse tree produced by stlParser#until.
+	def exitUntimedUntil(self, ctx: stlParser.UntimedUntilContext):
 		self.popStack()
 
 	# Enter a parse tree produced by stlParser#signalExpressionScope.
@@ -264,9 +282,7 @@ class CustomStlListener(stlListener):
 		pass
 
 	# Exit a parse tree produced by stlParser#value.
-	def exitValue(
-	    self, ctx: stlParser.ValueContext
-	):  # Only here to make the tree in the right shape
+	def exitValue(self, ctx: stlParser.ValueContext):  # Only here to make the tree in the right shape
 		pass
 
 	# Enter a parse tree produced by stlParser#signal.

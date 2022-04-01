@@ -36,3 +36,4 @@ Can I just use a derivative recomputation method to fix generated test data?
 			Received: SignalValue<T=179.0,V=0.984535704,D=-0.01934962100000004>
 		Obtained Signal has following next cp: 
 			SignalValue<T=178.05620414148459,V=0.7280432175174169,D=0.2717669124825831>
+

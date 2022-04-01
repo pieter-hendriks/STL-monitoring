@@ -6,6 +6,7 @@ from .helpers import getCosSignal
 from stl.utility import Interval, interval
 import warnings
 import math
+import time
 
 from stl.operators import computeTimedUntil, computeTimedEventually, computeUntimedUntil, computeUntimedEventually, computeAnd, computeOr
 
@@ -71,12 +72,21 @@ class UntilNodeTest(UntilNodeSetup):
 	def __runQuantitativeUntilComplexTestCases(self):
 		self.setInterval(TESTCASE1_INTERVAL_LOWERBOUND, TESTCASE1_INTERVAL_UPPERBOUND)
 		self.setInputSignals(TESTCASE1_LEFTCHILD_SIGNAL, TESTCASE1_RIGHTCHILD_SIGNAL)
+		startTime = time.time()
 		foundResult = self.node.quantitativeValidate(None, None)
+		stop = time.time()
+
+		print(f"Time taken = {stop - startTime}")
+
 		self.efficientAlgorithmTemporaryEqualityFunction(foundResult, TESTCASE1_RESULT_SIGNAL)
 
 		self.setInterval(TESTCASE2_INTERVAL_LOWERBOUND, TESTCASE2_INTERVAL_UPPERBOUND)
 		self.setInputSignals(TESTCASE2_LEFTCHILD_SIGNAL, TESTCASE2_RIGHTCHILD_SIGNAL)
+		startTime = time.time()
 		foundResult = self.node.quantitativeValidate(None, None)
+		stop = time.time()
+
+		print(f"Time taken = {stop - startTime}")
 		self.efficientAlgorithmTemporaryEqualityFunction(foundResult, TESTCASE2_RESULT_SIGNAL)
 
 	def testComplexShortQuantitativeUntil(self):

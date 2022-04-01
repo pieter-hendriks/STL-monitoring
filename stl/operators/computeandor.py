@@ -1,10 +1,13 @@
 from typing import Callable
 from ..signals import Signal
 
+
 # Implementation of AND/OR
-def __andOrHelper(lhs: Signal, rhs: Signal, operator: Callable=None) -> Signal:
+def __andOrHelper(lhs: Signal, rhs: Signal, operator: Callable = None) -> Signal:
 	""" Helper function for the computation of AND and OR, since these are very similar. Creates a new Signal instance to hold the result. """
-	lhs: Signal; rhs: Signal; lhs, rhs = Signal.computeComparableSignals(lhs, rhs)
+	lhs: Signal
+	rhs: Signal
+	lhs, rhs = Signal.computeComparableSignals(lhs, rhs)
 	result: Signal = Signal("andor")
 	for i in range(lhs.getCheckpointCount()):
 		if lhs.getValue(i) == rhs.getValue(i):
@@ -15,7 +18,9 @@ def __andOrHelper(lhs: Signal, rhs: Signal, operator: Callable=None) -> Signal:
 			else:
 				result.addCheckpoint(rhs.getCheckpoint(i))
 	result.recomputeDerivatives()
+	result.simplify()
 	return result
+
 
 def computeAnd(lhs: Signal, rhs: Signal) -> Signal:
 	""" Computes the logical AND between the two Signals (quantitative). Creates a new Signal instance to hold the result.  """
@@ -23,6 +28,7 @@ def computeAnd(lhs: Signal, rhs: Signal) -> Signal:
 	# Change the name to specific operation. Probably not vital.
 	s.setName("and")
 	return s
+
 
 def computeOr(lhs: Signal, rhs: Signal) -> Signal:
 	""" Computes the logical OR between the two Signals (quantitative). Creates a new Signal instance to hold the result.  """

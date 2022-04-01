@@ -16,7 +16,11 @@ class stlVisitor(ParseTreeVisitor):
 		return self.visitChildren(ctx)
 
 	# Visit a parse tree produced by stlParser#always.
-	def visitAlways(self, ctx: stlParser.AlwaysContext):
+	def visitUntimedAlways(self, ctx: stlParser.UntimedAlwaysContext):
+		return self.visitChildren(ctx)
+
+	# Visit a parse tree produced by stlParser#always.
+	def visitTimedAlways(self, ctx: stlParser.TimedAlwaysContext):
 		return self.visitChildren(ctx)
 
 	# Visit a parse tree produced by stlParser#booleanFilter.
@@ -48,11 +52,19 @@ class stlVisitor(ParseTreeVisitor):
 		return self.visitChildren(ctx)
 
 	# Visit a parse tree produced by stlParser#eventually.
-	def visitEventually(self, ctx: stlParser.EventuallyContext):
+	def visitTimedEventually(self, ctx: stlParser.TimedEventuallyContext):
 		return self.visitChildren(ctx)
 
 	# Visit a parse tree produced by stlParser#until.
-	def visitUntil(self, ctx: stlParser.UntilContext):
+	def visitTimedUntil(self, ctx: stlParser.TimedUntilContext):
+		return self.visitChildren(ctx)
+
+	# Visit a parse tree produced by stlParser#eventually.
+	def visitUntimedEventually(self, ctx: stlParser.UntimedEventuallyContext):
+		return self.visitChildren(ctx)
+
+	# Visit a parse tree produced by stlParser#until.
+	def visitUntimedUntil(self, ctx: stlParser.UntimedUntilContext):
 		return self.visitChildren(ctx)
 
 	# Visit a parse tree produced by stlParser#signalAbsolute.
@@ -60,9 +72,7 @@ class stlVisitor(ParseTreeVisitor):
 		return self.visitChildren(ctx)
 
 	# Visit a parse tree produced by stlParser#signalExpressionScope.
-	def visitSignalExpressionScope(
-	    self, ctx: stlParser.SignalExpressionScopeContext
-	):
+	def visitSignalExpressionScope(self, ctx: stlParser.SignalExpressionScopeContext):
 		return self.visitChildren(ctx)
 
 	# Visit a parse tree produced by stlParser#signalProduct.

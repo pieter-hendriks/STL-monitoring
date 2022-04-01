@@ -7,13 +7,15 @@ content
 formula
         : OPEN_BRACKET signalExpression (LARGER_THAN|SMALLER_THAN|EQUALS|UNEQUALS|LARGER_THAN_OR_EQUAL|SMALLER_THAN_OR_EQUAL) (expression|signalExpression) CLOSE_BRACKET #booleanFilter
         | (NEGATE|MINUS) formula #negation
-        | (SMALLER_THAN LARGER_THAN|DIAMOND) OPEN_CURLY constant COMMA constant CLOSE_CURLY formula #eventually
-        | (OPEN_SQUARE CLOSE_SQUARE|SQUARE) OPEN_CURLY constant COMMA constant CLOSE_CURLY formula #always
+        | (SMALLER_THAN LARGER_THAN|DIAMOND) OPEN_CURLY constant COMMA constant CLOSE_CURLY formula #timedEventually
+        | (OPEN_SQUARE CLOSE_SQUARE|SQUARE) OPEN_CURLY constant COMMA constant CLOSE_CURLY formula #timedAlways
+        | (SMALLER_THAN LARGER_THAN|DIAMOND) formula #untimedEventually
+        | (OPEN_SQUARE CLOSE_SQUARE|SQUARE) formula #untimedAlways
+        | formula UNTIL OPEN_CURLY constant COMMA constant CLOSE_CURLY formula #timedUntil
+        | formula UNTIL formula #untimedUntil
         | formula AND formula #and
-        | formula UNTIL OPEN_CURLY constant COMMA constant CLOSE_CURLY formula #until
         | OPEN_BRACKET formula CLOSE_BRACKET #scope
         | signalExpression #quantitativeSignal
-
         | formula (OR|PIPELINE) formula #or
         | formula (ARROW|SIGNLE_ARROW|DOUBLE_ARROW) formula #implication
         ;
