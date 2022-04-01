@@ -1,14 +1,16 @@
+import os
 import pickle
 from stl.signals import Signal, SignalList
 import antlr4 as a4
 import stl.parsing as stlParse
-import os
+import cProfile
 
 # Configuration
-dataFile = "stlTool/openAI/data.pickle"
-signalDataFile = "stlTool/openAI/signals.pickle"
-formulaFile = "stlTool/openAI/formulas/cartpoleFormula.txt"
-robustnessesFile = "stlTool/robustnesses.pickle"
+prefix = "stlTool/openAI/cartpole/goodData"
+dataFile = f"{prefix}/data.pickle"
+signalDataFile = f"{prefix}/signals.pickle"
+formulaFile = f"{prefix}/../cartpoleFormula.txt"
+robustnessesFile = f"{prefix}/robustnesses.pickle"
 
 if not os.path.exists(signalDataFile):
 	# Load data and create STL tree
@@ -56,25 +58,30 @@ stlTree = listener.stlTree
 with open('stlTree.dot', 'w') as f:
 	stlTree.toDot(f)
 
-# Perform the computation
 
-if not os.path.exists(robustnessesFile):
-	robustnesses = []
-	index = 0
-	for cartSignal, poleSignal in zip(cartSignals, poleSignals):
-		if any([abs(x) > 2.4 for x in cartSignal.getValues()]):
-			breakpoint = True
-		r = stlTree.validate(SignalList([cartSignal, poleSignal]))
-		robustnesses.append(r)
-		if index % 25 == 0:
-			print(f"Validated episode {index}")
-		index += 1
-	print(robustnesses)
-	with open(robustnessesFile, "wb") as f:
-		pickle.dump(robustnesses, f, pickle.HIGHEST_PROTOCOL)
-else:
-	with open(robustnessesFile, "rb") as f:
-		robustnesses = pickle.load(f)
+# Perform the computation
+def computeRobustness():
+	if not os.path.exists(robustnessesFile):
+		robustnesses = []
+		index = 0
+		for cartSignal, poleSignal in zip(cartSignals[1100:1200], poleSignals[1100:1200]):
+			if any([abs(x) > 2.4 for x in cartSignal.getValues()]):
+				breakpoint = True
+			r = stlTree.validate(SignalList([cartSignal, poleSignal]))
+			robustnesses.append(r)
+			if index % 25 == 0:
+				print(f"Validated episode {index}")
+			index += 1
+		print(robustnesses)
+		# with open(robustnessesFile, "wb") as f:
+		# 	pickle.dump(robustnesses, f, pickle.HIGHEST_PROTOCOL)
+	else:
+		with open(robustnessesFile, "rb") as f:
+			robustnesses = pickle.load(f)
+
+
+cProfile.run('computeRobustness()', 'efficientProfile')
+exit(0)
 
 import matplotlib.pyplot as plt
 
