@@ -132,9 +132,8 @@ class Signal:
 		# Get the sampling points where self and other are a) both defined or b) intersect
 		# So, any time x where x in self.times() and x in other.times()
 		# + any time y where, through the derivatives, we know that self.value(x) == other.value(x), assuming interpolation.
-		assert type(lhsSignal) == type(
-		    rhsSignal
-		), "Operation is unsupported between signals of different semantics."
+		assert type(lhsSignal) == type(rhsSignal),\
+				 "Operation is unsupported between signals of different semantics."
 		cls = type(lhsSignal)
 		lhsResult: Signal = cls('empty')
 		rhsResult: Signal = cls('empty')
