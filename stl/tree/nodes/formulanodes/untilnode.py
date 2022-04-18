@@ -22,8 +22,12 @@ class UntilNode(FormulaNode):
 	def syntaxAlgorithm(self, size: int, childResults: List[Signal], interval: Interval) -> Signal:
 		""" Uses the inefficient syntax-based algorithm to compute the timed Until operation. """
 		output: Signal = Signal("timedUntil")
-		for i in range(size):
-			t = childResults[1].getTime(i)
+		resultTimestamps = [x - interval.getUpper() for x in childResults[0].getTimes() if x - interval.getUpper() >= 0]
+		for i in range(len(resultTimestamps)):
+			t = resultTimestamps[i]
+			if t == 136:
+				t = 136
+			# t = childResults[1].getTime(i)
 			rhsInterval = childResults[1].computeInterval(interval + t, half_open=False)
 			values = []
 			derivatives = []
@@ -40,11 +44,8 @@ class UntilNode(FormulaNode):
 				sv = output.popCheckpoint()
 				if sv.getTime() < updatedLastTime:
 					output.emplaceCheckpoint(
-					    updatedLastTime, output.computeInterpolatedValue(updatedLastTime),
-					    output.getDerivative(-2)
+					    updatedLastTime, output.computeInterpolatedValue(updatedLastTime), output.getDerivative(-2)
 					)
-		output.recomputeDerivatives()
-		output.simplify()
 		return output
 
 	def __handleEfficientAlgorithm(self, signals: SignalList, plot: bool) -> Signal:
@@ -54,8 +55,7 @@ class UntilNode(FormulaNode):
 		elif len(self.children) == 2:
 			# Untimed Until -- no time interval children, 2 signal children ( two time interval and no signal isn't a possibility)
 			result = computeUntimedUntil(
-			    self.children[0].quantitativeValidate(signals, plot),
-			    self.children[1].quantitativeValidate(signals, plot)
+			    self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)
 			)
 		elif len(self.children) >= 3:
 			interval: Interval = Interval(
@@ -64,14 +64,12 @@ class UntilNode(FormulaNode):
 			)
 			if len(self.children) == 4:  # timed until, 2 time interval children, 2 signal children
 				result = computeTimedUntil(
-				    self.children[0].quantitativeValidate(signals, plot),
-				    self.children[3].quantitativeValidate(signals, plot), interval
+				    self.children[0].quantitativeValidate(signals, plot), self.children[3].quantitativeValidate(signals, plot),
+				    interval
 				)
 			else:
 				# Timed eventually - 2 time interval children, 1 signal child (time interval must always be exactly 0 or exactly 2, so this is only option)
-				result = computeTimedEventually(
-				    self.children[-1].quantitativeValidate(signals, plot), interval
-				)
+				result = computeTimedEventually(self.children[-1].quantitativeValidate(signals, plot), interval)
 		return result
 
 	def __handleSyntaxAlgorithm(self, signals: SignalList, plot: bool) -> Signal:
@@ -83,31 +81,33 @@ class UntilNode(FormulaNode):
 			        self.children[3].quantitativeValidate(signals, plot)
 			    )
 			)
+			name = "timedUntil"
 		# If we have three children, we have a timed eventually operation (interval (lower & upper), rhs)
 		elif len(self.children) == 3:
 			childResults: SignalList = SignalList(
-			    [
-			        Signal.createConstant('DummyTrueSignal', 0),
-			        self.children[2].quantitativeValidate(signals, plot)
-			    ]
+			    Signal.computeComparableSignals(
+			        Signal.createConstant('DummyTrueSignal', 1), self.children[2].quantitativeValidate(signals, plot)
+			    )
 			)
+			name = "timedEventually"
 		# If we have two children, we have an untimed until operation (lhs, rhs)
 		elif len(self.children) == 2:
 			childResults: SignalList = SignalList(
-			    [
+			    Signal.computeComparableSignals(
 			        self.children[0].quantitativeValidate(signals, plot),
 			        self.children[1].quantitativeValidate(signals, plot)
-			    ]
+			    )
 			)
+			name = "untimedUntil"
 		# Else we must have 1 child, which is the untimed eventually operation (rhs)
 		else:
 			assert len(self.children) == 1, "Invalid amount of children for until node."
 			childResults: SignalList = SignalList(
-			    [
-			        Signal.createConstant('DummyTrueSignal', 0),
-			        self.children[0].quantitativeValidate(signals, plot)
-			    ]
+			    Signal.computeComparableSignals(
+			        Signal.createConstant('DummyTrueSignal', 1), self.children[0].quantitativeValidate(signals, plot)
+			    )
 			)
+			name = "untimedEventually"
 		# Get the interval limit values for the interval [a, b]
 		# Untimed operation
 		aSignal: Signal = Signal.createConstant('a', 0)
@@ -121,6 +121,7 @@ class UntilNode(FormulaNode):
 		assert all([x == s.getValue(0) for s in [aSignal, bSignal] for x in s.getValues()])
 		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
 		result = self.syntaxAlgorithm(size, childResults, interval)
+		result.setName(name)
 		return result
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool = False) -> Signal:
@@ -139,10 +140,7 @@ class UntilNode(FormulaNode):
 		# Children are 2 integers from the time interval, plus one or two formulas.
 		if len(self.children) == 4:
 			childResults: SignalList = SignalList(
-			    [
-			        self.children[0].booleanValidate(signals, plot),
-			        self.children[3].booleanValidate(signals, plot)
-			    ]
+			    [self.children[0].booleanValidate(signals, plot), self.children[3].booleanValidate(signals, plot)]
 			)
 			childResults = SignalList(Signal.computeComparableSignals(childResults[0], childResults[1]))
 		else:
@@ -165,9 +163,7 @@ class UntilNode(FormulaNode):
 			self.plot(until)
 		return until
 
-	def booleanValidationImplementation(
-	    self, size: int, childResults: SignalList, interval: Interval
-	):
+	def booleanValidationImplementation(self, size: int, childResults: SignalList, interval: Interval):
 		a = interval.getLower()
 		b = interval.getUpper()
 		# Get the true intervals of the signals
@@ -181,9 +177,7 @@ class UntilNode(FormulaNode):
 			elif not childResults[0].getValue(i) and true_1:
 				true_1 = False
 				# temp_1.append(result[0][0][i - 1])  # Closed interval (discrete time steps)
-				temp_1.append(
-				    childResults[0].getTime(i)
-				)  # Half open interval [a,b) (continuous time steps)
+				temp_1.append(childResults[0].getTime(i))  # Half open interval [a,b) (continuous time steps)
 				intervals_1.append(temp_1)
 				temp_1 = []
 
@@ -193,9 +187,7 @@ class UntilNode(FormulaNode):
 			elif not childResults[1].getValue(i) and true_2:
 				true_2 = False
 				# temp_2.append(result[1][0][i - 1])  # Closed interval (discrete time steps)
-				temp_2.append(
-				    childResults[1].getTime(i)
-				)  # Half open interval [a,b) (continuous time steps)
+				temp_2.append(childResults[1].getTime(i))  # Half open interval [a,b) (continuous time steps)
 				intervals_2.append(temp_2)
 				temp_2 = []
 		if true_1:
@@ -240,13 +232,9 @@ class UntilNode(FormulaNode):
 					# SignalValue is edited to allow it specifically because of this (as of 13/01 - may see other dependencies later)
 					# No extra sorting happens in the SortedList after this change - which may cause problems.
 					# The asserts wrapping this code ensure no unexpected consequences propagate
-					assert until.getTimes() == sorted(
-					    until.getTimes()
-					), "Time was unsorted prior to time modification."
+					assert until.getTimes() == sorted(until.getTimes()), "Time was unsorted prior to time modification."
 					poppedPoint: SignalValue = until.popCheckpoint()
-					until.emplaceCheckpoint(
-					    childResults[0].getTime(-1) - b, poppedPoint.getValue(), poppedPoint.getDerivative()
-					)
+					until.emplaceCheckpoint(childResults[0].getTime(-1) - b, poppedPoint.getValue(), poppedPoint.getDerivative())
 					assert until.getTimes() == sorted(until.getTimes()), "Time modification created an issue."
 				else:
 					until.popCheckpoint()

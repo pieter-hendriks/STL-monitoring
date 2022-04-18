@@ -56,7 +56,6 @@ class SignalValue:
 		    and math.isclose(self.value, other.value, rel_tol=1e-7)
 		    and math.isclose(self.derivative, other.derivative, rel_tol=1e-7)
 		)
-		return self.timestamp == other.timestamp and self.value == other.value and self.derivative == other.derivative
 
 	def oldFormat(self) -> List[List[float]]:
 		return [[self.getTime()], [self.getValue()], [self.getDerivative()]]
