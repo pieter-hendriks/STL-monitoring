@@ -1,5 +1,6 @@
+""" Main """
+# pylint: disable-all
 import unittest
-import warnings
 if __name__ == "__main__":
 	# If no parameters, don't include cartpole
 	# argv = sys.argv

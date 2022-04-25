@@ -1,3 +1,4 @@
+#pylint: disable-all
 # Generated from stl.g4 by ANTLR 4.9.3
 from antlr4 import *
 from io import StringIO
@@ -106,25 +107,22 @@ class stlLexer(Lexer):
 	modeNames = ["DEFAULT_MODE"]
 
 	literalNames = [
-	    "<INVALID>", "'('", "')'", "'{'", "'}'", "'['", "']'", "'|'", "'-'", "'+'", "'*'", "'/'",
-	    "'.'", "'>'", "'>='", "'<'", "'<='", "'='", "'!='", "'\u25CA'", "'\u25A1'", "'U'", "'\u2192'",
-	    "'->'", "'=>'", "','"
+	    "<INVALID>", "'('", "')'", "'{'", "'}'", "'['", "']'", "'|'", "'-'", "'+'", "'*'", "'/'", "'.'", "'>'", "'>='",
+	    "'<'", "'<='", "'='", "'!='", "'\u25CA'", "'\u25A1'", "'U'", "'\u2192'", "'->'", "'=>'", "','"
 	]
 
 	symbolicNames = [
-	    "<INVALID>", "OPEN_BRACKET", "CLOSE_BRACKET", "OPEN_CURLY", "CLOSE_CURLY", "OPEN_SQUARE",
-	    "CLOSE_SQUARE", "PIPELINE", "MINUS", "PLUS", "STAR", "FORWARD_SLASH", "DOT", "LARGER_THAN",
-	    "LARGER_THAN_OR_EQUAL", "SMALLER_THAN", "SMALLER_THAN_OR_EQUAL", "EQUALS", "UNEQUALS",
-	    "DIAMOND", "SQUARE", "UNTIL", "AND", "OR", "NEGATE", "ARROW", "SIGNLE_ARROW", "DOUBLE_ARROW",
-	    "DIGIT", "WHITE_SPACE", "SIGNAL", "COMMA"
+	    "<INVALID>", "OPEN_BRACKET", "CLOSE_BRACKET", "OPEN_CURLY", "CLOSE_CURLY", "OPEN_SQUARE", "CLOSE_SQUARE",
+	    "PIPELINE", "MINUS", "PLUS", "STAR", "FORWARD_SLASH", "DOT", "LARGER_THAN", "LARGER_THAN_OR_EQUAL",
+	    "SMALLER_THAN", "SMALLER_THAN_OR_EQUAL", "EQUALS", "UNEQUALS", "DIAMOND", "SQUARE", "UNTIL", "AND", "OR",
+	    "NEGATE", "ARROW", "SIGNLE_ARROW", "DOUBLE_ARROW", "DIGIT", "WHITE_SPACE", "SIGNAL", "COMMA"
 	]
 
 	ruleNames = [
-	    "OPEN_BRACKET", "CLOSE_BRACKET", "OPEN_CURLY", "CLOSE_CURLY", "OPEN_SQUARE", "CLOSE_SQUARE",
-	    "PIPELINE", "MINUS", "PLUS", "STAR", "FORWARD_SLASH", "DOT", "LARGER_THAN",
-	    "LARGER_THAN_OR_EQUAL", "SMALLER_THAN", "SMALLER_THAN_OR_EQUAL", "EQUALS", "UNEQUALS",
-	    "DIAMOND", "SQUARE", "UNTIL", "AND", "OR", "NEGATE", "ARROW", "SIGNLE_ARROW", "DOUBLE_ARROW",
-	    "DIGIT", "WHITE_SPACE", "SIGNAL", "COMMA"
+	    "OPEN_BRACKET", "CLOSE_BRACKET", "OPEN_CURLY", "CLOSE_CURLY", "OPEN_SQUARE", "CLOSE_SQUARE", "PIPELINE", "MINUS",
+	    "PLUS", "STAR", "FORWARD_SLASH", "DOT", "LARGER_THAN", "LARGER_THAN_OR_EQUAL", "SMALLER_THAN",
+	    "SMALLER_THAN_OR_EQUAL", "EQUALS", "UNEQUALS", "DIAMOND", "SQUARE", "UNTIL", "AND", "OR", "NEGATE", "ARROW",
+	    "SIGNLE_ARROW", "DOUBLE_ARROW", "DIGIT", "WHITE_SPACE", "SIGNAL", "COMMA"
 	]
 
 	grammarFileName = "stl.g4"

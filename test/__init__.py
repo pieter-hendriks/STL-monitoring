@@ -1,2 +1,2 @@
-from .fullSystemTests import *
-from .unitTests import *
+""" STL Tool tests module """
+from . import fullSystemTests, unitTests

@@ -1,74 +1,84 @@
+# pylint: disable=missing-module-docstring
+from typing import List
+# pylint: enable=missing-module-docstring
+import numpy as np
 from .formulanode import FormulaNode
-from ....stlUtils import getBooleanIntersection
+from ....stlUtils import getTimeListIntersection
 from ....utility import Interval
 from ....signals import Signal, BooleanSignal, SignalList, SignalValue
-from typing import List
-import warnings
 from ....operators import computeTimedEventually, computeUntimedEventually, computeTimedUntil, computeUntimedUntil
 
 
 class UntilNode(FormulaNode):
+	""" Node representing the Until operation in STL formulas """
 
 	def __init__(self) -> None:
 		super().__init__()
 		self.__useSyntaxAlgorithm = False
 
 	def useSyntaxAlgorithm(self):
+		""" Sets the Until node to use the Syntax (inefficient) algorithm implementation. """
 		self.__useSyntaxAlgorithm = True
 
 	def useEfficientAlgorithm(self):
+		""" Sets the Until node to use the efficient algorithm implementation. """
 		self.__useSyntaxAlgorithm = False
 
-	def syntaxAlgorithm(self, size: int, childResults: List[Signal], interval: Interval) -> Signal:
+	# pylint: disable=no-self-use
+	def syntaxAlgorithm(self, childResults: List[Signal], interval: Interval) -> Signal:
 		""" Uses the inefficient syntax-based algorithm to compute the timed Until operation. """
 		output: Signal = Signal("timedUntil")
-		resultTimestamps = [x - interval.getUpper() for x in childResults[0].getTimes() if x - interval.getUpper() >= 0]
-		for i in range(len(resultTimestamps)):
-			t = resultTimestamps[i]
-			if t == 136:
-				t = 136
-			# t = childResults[1].getTime(i)
+		# Finding the timestamps is non-trivial, we need unique points from both the start points of intervals and endpoints
+		# And then compute the interval from that point on to have correct behaviour
+		intervalStartTimes = [
+		    x for x in childResults[0].getTimes() if childResults[0].getLargestTime() - interval.getUpper() >= x
+		]
+		intervalEndTimes = [x - interval.getUpper() for x in childResults[0].getTimes() if x - interval.getUpper() >= 0]
+		resultTimestamps = sorted(np.unique([*intervalStartTimes, *intervalEndTimes]))
+
+		for t in resultTimestamps:
 			rhsInterval = childResults[1].computeInterval(interval + t, half_open=False)
 			values = []
-			derivatives = []
 			for j in range(rhsInterval.getCheckpointCount()):
-				k = rhsInterval.getTime(j)
-				lhsInterval = childResults[0].computeInterval(Interval(t, k), half_open=False)
+				lhsInterval = childResults[0].computeInterval(Interval(t, rhsInterval.getTime(j)), half_open=False)
 				values.append(min(rhsInterval.getValue(j), min(lhsInterval.getValues())))
-				derivatives.append(min(rhsInterval.getDerivative(j), min(lhsInterval.getDerivatives())))
 			if values:
-				output.emplaceCheckpoint(t, max(values), max(derivatives))
+				output.emplaceCheckpoint(t, max(values))
+
 		for i in reversed(range(output.getCheckpointCount())):
 			updatedLastTime = childResults[0].getTime(-1) - interval.getUpper()
 			if output.getTime(i) > updatedLastTime:
 				sv = output.popCheckpoint()
 				if sv.getTime() < updatedLastTime:
-					output.emplaceCheckpoint(
-					    updatedLastTime, output.computeInterpolatedValue(updatedLastTime), output.getDerivative(-2)
-					)
+					output.emplaceCheckpoint(updatedLastTime, output.computeInterpolatedValue(updatedLastTime))
+		output.recomputeDerivatives()
 		return output
 
+	# pylint: enable=no-self-use
+
 	def __handleEfficientAlgorithm(self, signals: SignalList, plot: bool) -> Signal:
+		if len(self.children) in [2, 4]:
+			childSignals = SignalList(
+			    Signal.computeComparableSignals(
+			        self.children[0].quantitativeValidate(signals, plot),
+			        self.children[-1].quantitativeValidate(signals, plot)
+			    )
+			)
 		if len(self.children) == 1:
 			# Untimed eventually -- no time interval children, 1 signal child
 			result = computeUntimedEventually(self.children[0].quantitativeValidate(signals, plot))
 		elif len(self.children) == 2:
-			# Untimed Until -- no time interval children, 2 signal children ( two time interval and no signal isn't a possibility)
-			result = computeUntimedUntil(
-			    self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)
-			)
+			# Untimed Until -- no time interval children, 2 signal children (can't have time, no signal)
+			result = computeUntimedUntil(childSignals[0], childSignals[1])
 		elif len(self.children) >= 3:
 			interval: Interval = Interval(
 			    self.children[-3].quantitativeValidate(signals, plot).getValue(0),
 			    self.children[-2].quantitativeValidate(signals, plot).getValue(0)
 			)
 			if len(self.children) == 4:  # timed until, 2 time interval children, 2 signal children
-				result = computeTimedUntil(
-				    self.children[0].quantitativeValidate(signals, plot), self.children[3].quantitativeValidate(signals, plot),
-				    interval
-				)
+				result = computeTimedUntil(childSignals[0], childSignals[1], interval)
 			else:
-				# Timed eventually - 2 time interval children, 1 signal child (time interval must always be exactly 0 or exactly 2, so this is only option)
+				# Timed eventually - 2 time interval children, 1 signal child (time can't have 1 child, so only option)
 				result = computeTimedEventually(self.children[-1].quantitativeValidate(signals, plot), interval)
 		return result
 
@@ -117,10 +127,9 @@ class UntilNode(FormulaNode):
 			aSignal: Signal = self.children[-3].quantitativeValidate(signals, plot)
 			bSignal: Signal = self.children[-2].quantitativeValidate(signals, plot)
 
-		size = childResults[0].getCheckpointCount()
-		assert all([x == s.getValue(0) for s in [aSignal, bSignal] for x in s.getValues()])
+		assert all(x == s.getValue(0) for s in [aSignal, bSignal] for x in s.getValues())
 		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
-		result = self.syntaxAlgorithm(size, childResults, interval)
+		result = self.syntaxAlgorithm(childResults, interval)
 		result.setName(name)
 		return result
 
@@ -130,9 +139,7 @@ class UntilNode(FormulaNode):
 		else:
 			result: Signal = self.__handleSyntaxAlgorithm(signals, plot)
 		result.recomputeDerivatives()
-		result.simplify()
-		if plot:
-			self.quantitativePlot(result)
+		self.quantitativePlot(plot, result)
 		return result
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
@@ -156,20 +163,22 @@ class UntilNode(FormulaNode):
 		aSignal: BooleanSignal = self.children[-3].booleanValidate(signals, plot)
 		bSignal: BooleanSignal = self.children[-2].booleanValidate(signals, plot)
 		assert aSignal.getCheckpointCount() == bSignal.getCheckpointCount(
-		) == 1, f"Ambiguous interval sizes. These should be from ValueNodes, which return a single-value Signal."
+		) == 1, "Ambiguous interval sizes. These should be from ValueNodes, which return a single-value Signal."
 		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
 		until = self.booleanValidationImplementation(size, childResults, interval)
-		if plot:
-			self.plot(until)
+		self.booleanPlot(plot, until)
 		return until
 
+	# pylint: disable=no-self-use,too-many-locals,too-many-branches,too-many-statements
 	def booleanValidationImplementation(self, size: int, childResults: SignalList, interval: Interval):
+		""" Method implementing the boolean validation for the Until node. Syntax based algorithm. """
 		a = interval.getLower()
 		b = interval.getUpper()
 		# Get the true intervals of the signals
 		intervals_1, intervals_2 = [], []
 		temp_1, temp_2 = [], []
 		true_1, true_2 = False, False
+
 		for i in range(size):
 			if childResults[0].getValue(i) and not true_1:
 				true_1 = True
@@ -201,25 +210,25 @@ class UntilNode(FormulaNode):
 		intervals_until = []
 		for inter_1 in intervals_1:
 			for inter_2 in intervals_2:
-				intersection = getBooleanIntersection(inter_1, inter_2)
+				intersection = getTimeListIntersection(inter_1, inter_2)
 				if intersection:
 					interval = [max(0, intersection[0] - b), min(size, intersection[1] - a)]
 					if interval[0] > interval[1]:  # Interval doesn't exist
 						continue
-					intersection = getBooleanIntersection(interval, inter_1)
+					intersection = getTimeListIntersection(interval, inter_1)
 					if intersection:
 						intervals_until.append(intersection)
 		# Calculate the entire until, make the intervals true in the until
 		until = BooleanSignal("until", childResults[1].getTimes(), [0] * size)
-		for interval in intervals_until:
-			for timestamp in interval:
+		for untilInterval in intervals_until:
+			for timestamp in untilInterval:
 				if timestamp in until.getTimes():
 					timestampIndex = until.getTimes().index(timestamp)
 					until.getCheckpoint(timestampIndex).setValue(1)
 				else:
 					until.emplaceCheckpoint(timestamp, 1)
-			intervalStartIndex = until.getTimes().index(interval[0])
-			intervalEndIndex = until.getTimes().index(interval[1])
+			intervalStartIndex = until.getTimes().index(untilInterval[0])
+			intervalEndIndex = until.getTimes().index(untilInterval[1])
 			for i in range(intervalStartIndex, intervalEndIndex):
 				# Iteration (by index) over all time stamps in until part of the interval
 				# Half-open interval, so exclude the last value.
@@ -228,10 +237,6 @@ class UntilNode(FormulaNode):
 		for i in reversed(range(until.getCheckpointCount())):
 			if until.getTime(i) > childResults[0].getTime(-1) - b:
 				if until.getTime(i - 1) < childResults[0].getTime(-1) - b:
-					# TODO: Figure out if this code is working properly. Changing the time like that seems fucky.
-					# SignalValue is edited to allow it specifically because of this (as of 13/01 - may see other dependencies later)
-					# No extra sorting happens in the SortedList after this change - which may cause problems.
-					# The asserts wrapping this code ensure no unexpected consequences propagate
 					assert until.getTimes() == sorted(until.getTimes()), "Time was unsorted prior to time modification."
 					poppedPoint: SignalValue = until.popCheckpoint()
 					until.emplaceCheckpoint(childResults[0].getTime(-1) - b, poppedPoint.getValue(), poppedPoint.getDerivative())
@@ -239,3 +244,4 @@ class UntilNode(FormulaNode):
 				else:
 					until.popCheckpoint()
 		return until
+		# pylint: enable=no-self-use,too-many-locals,too-many-branches,too-many-statements

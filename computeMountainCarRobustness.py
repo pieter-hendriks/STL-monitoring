@@ -1,22 +1,20 @@
+""" Computes the robustness for a mountain car execution trace. """
 import os
 import pickle
-from turtle import pos
 from stl.signals import Signal, SignalList
 from stl.tree import UntilNode
 import antlr4 as a4
 import stl.parsing as stlParse
-import cProfile
 
 # Configuration
-prefix = "stlTool/openAI/mountaincar"
+prefix = "stlTool/examples/mountaincar"
 dataPickle = f"{prefix}/data.pickle"
 signalDataFile = f"{prefix}/signals.pickle"
 formulaFile = f"{prefix}/formula.txt"
 robustnessesFile = f"{prefix}/robustnesses.pickle"
-
 if not os.path.exists(signalDataFile):
 	if not os.path.exists(dataPickle):
-		from openAI.mountaincar.data import trainlog
+		from examples.mountaincar import trainlog
 		with open(dataPickle, 'wb') as f:
 			pickle.dump(trainlog, f, protocol=pickle.HIGHEST_PROTOCOL)
 	else:
@@ -56,6 +54,7 @@ untilNode: UntilNode = stlTree.children[0]
 
 # Perform the computation
 def computeRobustness():
+	""" Compute robustness """
 	if not os.path.exists(robustnessesFile):
 		robustnesses = []
 		index = 0

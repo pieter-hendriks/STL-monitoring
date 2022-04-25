@@ -1,8 +1,10 @@
 import unittest
 from stl.tree import IntValueNode
-from stl.signals import SignalList, Signal, BooleanSignal
+from stl.signals import Signal
+
 
 class IntValueNodeTest(unittest.TestCase):
+
 	def setUp(self):
 		pass
 
@@ -13,7 +15,7 @@ class IntValueNodeTest(unittest.TestCase):
 		node: IntValueNode = IntValueNode()
 		node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [0, 0], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -24,7 +26,7 @@ class IntValueNodeTest(unittest.TestCase):
 		node: IntValueNode = IntValueNode()
 		node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [123], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [123, 123], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -36,7 +38,7 @@ class IntValueNodeTest(unittest.TestCase):
 		node.processToken("-")
 		node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [-123], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [-123, -123], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 

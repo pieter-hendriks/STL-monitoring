@@ -1,10 +1,13 @@
+""" Implementation of AND and OR operations. """
+
 from typing import Callable
 from ..signals import Signal
 
 
 # Implementation of AND/OR
 def __andOrHelper(lhs: Signal, rhs: Signal, operator: Callable = None) -> Signal:
-	""" Helper function for the computation of AND and OR, since these are very similar. Creates a new Signal instance to hold the result. """
+	""" Helper function for the computation of AND and OR, since these are very similar.
+	 Creates a new Signal instance to hold the result. """
 	lhs: Signal
 	rhs: Signal
 	lhs, rhs = Signal.computeComparableSignals(lhs, rhs)
@@ -18,12 +21,12 @@ def __andOrHelper(lhs: Signal, rhs: Signal, operator: Callable = None) -> Signal
 			else:
 				result.addCheckpoint(rhs.getCheckpoint(i))
 	result.recomputeDerivatives()
-	result.simplify()
 	return result
 
 
 def computeAnd(lhs: Signal, rhs: Signal) -> Signal:
-	""" Computes the logical AND between the two Signals (quantitative). Creates a new Signal instance to hold the result.  """
+	""" Computes the logical AND between the two Signals (quantitative).
+	 Creates a new Signal instance to hold the result.  """
 	s = __andOrHelper(lhs, rhs, lambda x, y: x < y)
 	# Change the name to specific operation. Probably not vital.
 	s.setName("and")
@@ -31,7 +34,8 @@ def computeAnd(lhs: Signal, rhs: Signal) -> Signal:
 
 
 def computeOr(lhs: Signal, rhs: Signal) -> Signal:
-	""" Computes the logical OR between the two Signals (quantitative). Creates a new Signal instance to hold the result.  """
+	""" Computes the logical OR between the two Signals (quantitative).
+	 Creates a new Signal instance to hold the result.  """
 	s = __andOrHelper(lhs, rhs, lambda x, y: x > y)
 	# Change the name to specific operation. Probably not vital.
 	s.setName("or")

@@ -1,2 +1,2 @@
+""" STL tool unit tests """
 from .nodeTests import *
-from .helperTests import *

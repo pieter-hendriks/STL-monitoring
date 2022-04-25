@@ -1,10 +1,10 @@
+""" Implementation for ValueNode class used in STL ASTs """
 from ..node import Node
-from typing import Union
-from ....signals import Signal, BooleanSignal, SignalList
-import math
+from ....signals import Signal, SignalList
 
 
 class ValueNode(Node):  # Abstract class
+	""" Implementation of a Node representing a literal Value in STL formula."""
 
 	def __init__(self):
 		super().__init__()

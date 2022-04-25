@@ -5,7 +5,9 @@ from stl.signals import SignalList, Signal, BooleanSignal
 from stl.tree import AbsoluteValueNode
 from .helpers import getCosSignal
 
+
 class AbsoluteValueNodeTest(UnaryOperationTest):
+
 	def setUp(self):
 		# Node doesn't need to read input so isn't method dependent
 		self.node: AbsoluteValueNode = AbsoluteValueNode()
@@ -45,7 +47,7 @@ class AbsoluteValueNodeTest(UnaryOperationTest):
 		self.quantitativeValidationTestHelper(negSignal, resSignal)
 		# Boolean signal should remain unchanged
 		negSignal = BooleanSignal.fromSignal(negSignal)
-		resSignal = BooleanSignal('absolutevalue', [0,1,2], [0,0,0], [0,0,0])
+		resSignal = BooleanSignal('absolutevalue', [0, 1, 2], [0, 0, 0], [0, 0, 0])
 		self.booleanValidationTestHelper(negSignal, resSignal)
 
 	def testNegativeVariableSignal(self):
@@ -53,28 +55,30 @@ class AbsoluteValueNodeTest(UnaryOperationTest):
 		negSignal: Signal = Signal('testsignal', [0, 1, 2], [-1, -3, -4], [-2, -1, 0])
 		resSignal: Signal = Signal("absolutevalue", [0, 1, 2], [1, 3, 4], [2, 1, 0])
 		self.quantitativeValidationTestHelper(negSignal, resSignal)
-		
+
 		# Derivate recomputation may result in negative derivatives where previously there was a positive derivative.
-		negSignal = Signal('testsignal', [0,1,2], [-5, -4, -6], [1, -2, 0])
-		resSignal = Signal('absolutevalue', [0,1,2], [5, 4, 6], [-1, 2, 0])
+		negSignal = Signal('testsignal', [0, 1, 2], [-5, -4, -6], [1, -2, 0])
+		resSignal = Signal('absolutevalue', [0, 1, 2], [5, 4, 6], [-1, 2, 0])
 		self.quantitativeValidationTestHelper(negSignal, resSignal)
 
 		# Boolean signal should remain unchanged
 		negSignal = BooleanSignal.fromSignal(negSignal)
-		resSignal = BooleanSignal('absolutevalue', [0,1,2], [0,0,0], [0,0,0])
+		resSignal = BooleanSignal('absolutevalue', [0, 1, 2], [0, 0, 0], [0, 0, 0])
 		self.booleanValidationTestHelper(negSignal, resSignal)
 
 	def testCosSignal(self):
 		# Alternating [1, -1]-signal (~=cosine) should not become constant
-		cosSignal: Signal = Signal('testsignal', [0,1,2,3,4,5,6], [1, -1, 1, -1, 1, -1, 1], [-2, 2, -2, 2, -2, 2, 0])
-		resSignal: Signal = Signal('absolutevalue', [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6], [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1], [-2, 2, -2, 2, -2, 2, -2, 2, -2, 2, -2, 2, 0])
+		cosSignal: Signal = Signal('testsignal', [0, 1, 2, 3, 4, 5, 6], [1, -1, 1, -1, 1, -1, 1], [-2, 2, -2, 2, -2, 2, 0])
+		resSignal: Signal = Signal(
+		    'absolutevalue', [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6], [1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+		    [-2, 2, -2, 2, -2, 2, -2, 2, -2, 2, -2, 2, 0]
+		)
 		self.quantitativeValidationTestHelper(cosSignal, resSignal)
 
 		# Boolean cosine signal; all bool should remain unchanged
-		cosSignal = BooleanSignal("testsignal", [0,1,2,3,4,5,6], [1, 0, 1, 0, 1, 0, 1], [0,0,0,0,0,0,0])
-		resSignal = BooleanSignal('absolutevalue', [0,1,2,3,4,5,6], [1, 0, 1, 0, 1, 0, 1], [0,0,0,0,0,0,0])
+		cosSignal = BooleanSignal("testsignal", [0, 1, 2, 3, 4, 5, 6], [1, 0, 1, 0, 1, 0, 1], [0, 0, 0, 0, 0, 0, 0])
+		resSignal = BooleanSignal('absolutevalue', [0, 1, 2, 3, 4, 5, 6], [1, 0, 1, 0, 1, 0, 1], [0, 0, 0, 0, 0, 0, 0])
 		self.booleanValidationTestHelper(cosSignal, resSignal)
-		
 
 
 if __name__ == "__main__":

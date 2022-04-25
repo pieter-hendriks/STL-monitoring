@@ -1,16 +1,13 @@
+""" Content node class """
 from ..node import Node
 from ....utility import PlotHelper
 from ....signals import SignalList, Signal
 
 
 class ContentNode(Node):
+	""" Node describing a full STL formula; used as the root node in the AST """
 
-	def __init__(self):
-		super().__init__()
-
-	def validate(
-	    self, signals: SignalList, semantic: str = 'quantitative', plot: bool = False
-	) -> Signal:
+	def validate(self, signals: SignalList, semantic: str = 'quantitative', plot: bool = False) -> Signal:
 		assert semantic in ['boolean', 'quantitative']
 		# Create subplots
 		if plot:

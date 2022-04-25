@@ -6,11 +6,13 @@ from stl.tree.nodes.formulanodes.comparisonoperatornode import ComparisonOperato
 from .testUnaryOperation import UnaryOperationTest
 from .helpers import getCosSignal
 
+
 class NegationNodeTest(UnaryOperationTest):
+
 	def setUp(self):
 		self.node: NegationNode = NegationNode()
 		super().setUp()
-		
+
 	def testEmptySignal(self):
 		s1 = Signal("empty")
 		rs = Signal("negation")
@@ -40,9 +42,10 @@ class NegationNodeTest(UnaryOperationTest):
 		rs = Signal('negation', s1.getTimes(), [-x for x in s1.getValues()], [-d for d in s1.getDerivatives()])
 		self.quantitativeValidationTestHelper(s1, rs)
 		s1 = BooleanSignal.fromSignal(s1)
-		rs = BooleanSignal('negation', s1.getTimes(), [1 if x == 0 else 0 for x in s1.getValues()], [0] * len(s1.getDerivatives()))
+		rs = BooleanSignal(
+		    'negation', s1.getTimes(), [1 if x == 0 else 0 for x in s1.getValues()], [0] * len(s1.getDerivatives())
+		)
 		self.booleanValidationTestHelper(s1, rs)
-
 
 
 if __name__ == "__main__":

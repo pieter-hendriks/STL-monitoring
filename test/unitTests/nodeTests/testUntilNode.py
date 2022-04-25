@@ -96,8 +96,8 @@ class UntilNodeTest(UntilNodeSetup):
 		self.__runQuantitativeUntilComplexTestCases()
 
 	def testComplexLongQuantitativeUntil(self):
-		# warnings.warn("Complex long test disabled!")
-		# return
+		warnings.warn("Complex long test disabled!")
+		return
 		self.node.useEfficientAlgorithm()
 		self.__runQuantitativeUntilComplexTestCases()
 
@@ -114,6 +114,19 @@ class UntilNodeTest(UntilNodeSetup):
 		expectedResult = Signal('timedUntil', [0], [-1], [0])
 		self.assertEqual(expectedResult, self.node.quantitativeValidate(None, None))
 
+	def __simpleSignalBooleanTestHelper(self):
+		simpleSignal = BooleanSignal('test', [0, 1], [0, 1], [1, 0])
+		self.setInputSignals(simpleSignal, simpleSignal)
+		self.setInterval(0, 1)
+		expectedResult = BooleanSignal('until', [0], [0], [0])
+		self.assertEqual(expectedResult, self.node.booleanValidate(None, None))
+
+		simpleSignal = BooleanSignal('test', [0, 1], [-1, 1], [2, 0])
+		self.setInputSignals(simpleSignal, simpleSignal)
+		self.setInterval(0, 1)
+		expectedResult = BooleanSignal('until', [0], [0], [0])
+		self.assertEqual(expectedResult, self.node.booleanValidate(None, None))
+
 	def __smallSignalTestHelper(self):
 		left = Signal('test', [0, 1, 2, 3, 4], [2, 7, 5, 4, -1], [5, -2, -1, -5, 0])
 		right = Signal('test', [0, 1, 2, 3, 4], [-1, -1, -1, 1, 1], [0, 0, 2, 0, 0])
@@ -126,7 +139,7 @@ class UntilNodeTest(UntilNodeSetup):
 
 		self.setInterval(0, 2)
 		result = self.node.quantitativeValidate(None, None)
-		expectedResult = Signal('timedUntil', [0, 1, 2], [-1, 1, 1], [2, 0, 0])
+		expectedResult = Signal('timedUntil', [0, 1, 1.6, 2], [-1, 1, 1, 1], [2, 0, 0, 0])
 		self.assertEqual(expectedResult, result)
 		
 		self.setInterval(2, 4)
@@ -136,12 +149,12 @@ class UntilNodeTest(UntilNodeSetup):
 
 		self.setInterval(1, 2)
 		result = self.node.quantitativeValidate(None, None)
-		expectedResult = Signal('timedUntil', [0, 1, 2], [-1, 1, 1], [2, 0, 0])
+		expectedResult = Signal('timedUntil', [0, 1, 1.6, 2], [-1, 1, 1, 1], [2, 0, 0, 0])
 		self.assertEqual(expectedResult, result)
 
 		self.setInterval(1, 3)
 		result = self.node.quantitativeValidate(None, None)
-		expectedResult = Signal('timedUntil', [0, 1], [1, 1], [0, 0])
+		expectedResult = Signal('timedUntil', [0, 0.6, 1], [1, 1, 1], [0, 0, 0])
 		self.assertEqual(expectedResult, result)
 
 
@@ -169,10 +182,8 @@ class UntilNodeTest(UntilNodeSetup):
 		self.node.useEfficientAlgorithm()
 		self.__smallSignalTestHelper()
 
-	# TODO: Test Boolean until
 	def testSimpleSignalBoolean(self):
-		warnings.warn("Boolean testing isn't implemented yet - pls fix.")
-		return
+		self.__simpleSignalBooleanTestHelper()
 
 
 	def testComputeTimedEventuallySubroutine(self):

@@ -1,3 +1,4 @@
+#pylint: disable-all
 # Generated from stl.g4 by ANTLR 4.9.2
 from antlr4 import *  # pylint: disable=unused-wildcard-import
 # pylint: disable=relative-beyond-top-level

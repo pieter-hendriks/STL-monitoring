@@ -2,9 +2,12 @@ import unittest
 from stl.tree import FloatValueNode
 from stl.signals import Signal, SignalList, BooleanSignal
 from typing import Iterable
+
+
 class FloatValueNodeTest(unittest.TestCase):
+
 	def setUp(self):
-		pass	
+		pass
 
 	def testNegativeZeroValue(self):
 		# Str because that's the data type the node gets
@@ -14,7 +17,7 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [0, 0], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -26,7 +29,7 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [0, 0], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -38,7 +41,7 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [0, 0], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -50,7 +53,7 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [0], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [0, 0], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -62,7 +65,7 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [123], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [123, 123], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -74,7 +77,7 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [123.456], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [123.456, 123.456], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -86,7 +89,7 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [-123], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [-123, -123], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
 
@@ -98,11 +101,9 @@ class FloatValueNodeTest(unittest.TestCase):
 		for value in values:
 			node.processToken(value)
 		# Create expected result and compare the two
-		expectedSignal: Signal = Signal("ValueNodeSignal", [0], [-123.456], [0])
+		expectedSignal: Signal = Signal("ValueNodeSignal", [0, float('inf')], [-123.456, -123.456], [0, 0])
 		self.assertEqual(node.quantitativeValidate(None, None), expectedSignal)
 		self.assertEqual(node.booleanValidate(None, None), expectedSignal)
-
-
 
 
 if __name__ == "__main__":

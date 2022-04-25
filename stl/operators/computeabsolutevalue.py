@@ -1,3 +1,4 @@
+""" Implementation of the absolute value STL operation """
 from ..signals import Signal
 
 
@@ -9,5 +10,4 @@ def computeAbsoluteValue(s: Signal) -> Signal:
 		# Derivatives are 0, because we need to recompute them.
 		outSignal.emplaceCheckpoint(cp.getTime(), abs(cp.getValue()), 0)
 	outSignal.recomputeDerivatives()
-	outSignal.simplify()
 	return outSignal

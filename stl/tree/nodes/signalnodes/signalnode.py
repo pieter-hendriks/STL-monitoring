@@ -1,11 +1,10 @@
+""" Implementation for a SignalNode. """
 from ..node import Node
-import warnings
-import pandas as pd
 from ....signals import SignalList, Signal, BooleanSignal
-from typing import Union
 
 
 class SignalNode(Node):
+	""" Class representing a Signal from an STL formula in as an AST node. """
 
 	def __init__(self):
 		super().__init__()
@@ -16,22 +15,17 @@ class SignalNode(Node):
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
 		signal = signals.getByName(self.signalName)
-		if type(signal) != BooleanSignal:
+		if not isinstance(type, BooleanSignal):
 			# Should be only other option
-			assert type(signal) == Signal
+			assert isinstance(signal, Signal)
 			signal = BooleanSignal.fromSignal(signal)
-		signal.simplify()
 		return signal
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
 		signal = signals.getByName(self.signalName)
-		if type(signal) != Signal:
-			# Should be only other option
-			assert type(signal) == BooleanSignal
+		if isinstance(signal, BooleanSignal):
 			signal = Signal.fromBooleanSignal(signal)
-			# The boolean signal doesn't use derivatives, so we must initialize them in the quantitative signal
 			signal.recomputeDerivatives()
-		signal.simplify()
 		return signal
 
 	def text(self) -> str:

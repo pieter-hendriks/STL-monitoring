@@ -1,7 +1,10 @@
+""" Module containing implementation for IntegerValueNode for STL AST """
+
 from .valuenode import ValueNode
+
+
 class IntValueNode(ValueNode):
-	def __init__(self):
-		super().__init__()
+	""" Node representing an integer literal from an STL formula in STL AST """
 
 	def processToken(self, token: str) -> None:
 		if token == '-':

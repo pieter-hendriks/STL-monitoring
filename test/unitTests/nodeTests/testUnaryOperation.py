@@ -2,7 +2,9 @@ import unittest
 import unittest.mock as mock
 from stl.signals import Signal, BooleanSignal
 
+
 class UnaryOperationTest(unittest.TestCase):
+
 	def setUp(self):
 		self.child: mock.Mock = mock.Mock()
 		self.node.children = [self.child]

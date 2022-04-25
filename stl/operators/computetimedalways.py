@@ -1,3 +1,4 @@
+""" STL timed Always operation """
 from ..signals import Signal
 from ..utility import Interval
 from .computenot import computeNot

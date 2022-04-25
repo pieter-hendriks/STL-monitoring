@@ -1,3 +1,4 @@
+""" STL Timed Until operation """
 from ..utility import Interval
 from ..signals import Signal
 from .computeandor import computeAnd
@@ -8,8 +9,8 @@ from .computeuntimeduntil import computeUntimedUntil
 
 def computeTimedUntil(lhsSignal: Signal, rhsSignal: Signal, interval: Interval) -> Signal:
 	""" Computes the timed until STL operation. Creates a new Signal instance to hold the result.  """
-	assert type(lhsSignal) == type(
-	    rhsSignal
+	assert isinstance(lhsSignal, type(rhsSignal)) and isinstance(
+	    rhsSignal, type(lhsSignal)
 	), "Operations can only meaningfully be performed on Signals of the same type."
 	if interval.getUpper() == float('inf'):
 		# Unbounded until: robustness(xU[a, +inf]y) = robustness(always[0, a](xUy))
@@ -17,7 +18,11 @@ def computeTimedUntil(lhsSignal: Signal, rhsSignal: Signal, interval: Interval) 
 		alwaysInterval: Interval = Interval(0, interval.getLower())
 		output: Signal = computeTimedAlways(untimedUntilResult, alwaysInterval)
 	else:
-		# Bounded until: robustness(xU[a,b]y) = robustness(eventually[a,b](y)ANDxU[a,+inf]y)
+		# Bounded until: robustness(xU[a,b]y) =
+		# robustness(
+		# 	eventually[a,b](y) AND
+		# 	(xU[a, +inf]y)
+		# )
 		eventuallyRhs: Signal = computeTimedEventually(rhsSignal, interval)
 		unboundedInterval: Interval = Interval(interval.getLower(), float('inf'))
 		unboundedUntil: Signal = computeTimedUntil(lhsSignal, rhsSignal, unboundedInterval)

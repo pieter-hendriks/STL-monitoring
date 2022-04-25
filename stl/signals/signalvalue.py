@@ -1,11 +1,13 @@
-import warnings
+""" Implementation of a Signal Value """
 from typing import List
+import warnings
 import math
 
 
 class SignalValue:
-	# Data container class for signal values
-	# A signal is a collection of these, sorted by self.timestamp (ascending)
+	""" Data container class for signal values
+	A signal is a collection of these, sorted by self.timestamp (ascending) """
+
 	def __init__(self, time: float, value: float, derivative: float = None) -> None:
 		self.timestamp: float = float(time)
 		self.value: float = float(value)
@@ -15,15 +17,22 @@ class SignalValue:
 			self.derivative = 0
 
 	def getTime(self) -> float:
+		""" Return the SignalValue's timestamp """
 		return self.timestamp
 
 	def getValue(self) -> float:
+		""" Return the SignalValue's value """
 		return self.value
 
 	def getDerivative(self) -> float:
+		""" Return the SignalValue's derivative """
 		return self.derivative
 
 	def copy(self) -> float:
+		""" Return a copy of the SignalValue.
+		Used to avoid having references to the same SV in
+		multiple Signals. This would cause problems when changes to the Signal occur,
+		since they would also be made in different Signals the SV is a part of. """
 		return SignalValue(self.timestamp, self.value, self.derivative)
 
 	# WARNING: Using this on a checkpoint that is inside a SortedList will lead to hard to find buggy behaviour.
@@ -37,9 +46,11 @@ class SignalValue:
 		self.timestamp = float(v)
 
 	def setValue(self, v: float) -> None:
+		""" Change the value for this SV """
 		self.value = float(v)
 
 	def setDerivative(self, v: float) -> None:
+		""" Change the derivative for this SV """
 		self.derivative = float(v)
 
 	def __str__(self) -> str:
@@ -58,4 +69,5 @@ class SignalValue:
 		)
 
 	def oldFormat(self) -> List[List[float]]:
+		""" Conver the SV to the old format; [[times], [values], [derivatives]] """
 		return [[self.getTime()], [self.getValue()], [self.getDerivative()]]

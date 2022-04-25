@@ -1,5 +1,5 @@
+""" STL untimed Always Operation """
 from ..signals import Signal
-from ..utility import Interval
 from .computenot import computeNot
 from .computeuntimedeventually import computeUntimedEventually
 

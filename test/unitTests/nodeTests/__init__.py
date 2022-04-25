@@ -1,3 +1,4 @@
+""" Tests for all of the STL nodes """
 from .testAbsoluteValueNode import AbsoluteValueNodeTest
 from .testAndNode import AndNodeTest
 from .testBinaryOperationNodeDivision import BinaryOperationNodeDivisionTest

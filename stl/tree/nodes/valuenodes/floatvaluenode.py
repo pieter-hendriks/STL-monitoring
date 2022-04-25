@@ -1,6 +1,11 @@
+""" Module containing implementation for FloatValueNode for STL AST """
+
 from .valuenode import ValueNode
 
+
 class FloatValueNode(ValueNode):
+	""" Node representing a floating point literal from an STL formula in STL AST """
+
 	def __init__(self):
 		super().__init__()
 		self.integer = None
@@ -10,7 +15,7 @@ class FloatValueNode(ValueNode):
 		if token == '-':
 			self.sign *= -1
 			return
-		elif token == '.':
+		if token == '.':
 			return
 
 		if self.integer is None:

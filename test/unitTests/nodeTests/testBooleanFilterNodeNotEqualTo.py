@@ -59,7 +59,7 @@ class BooleanFilterNodeNotEqualToTest(ComparisonOperatorNodeTest):
 
 
 		s2 = getShiftedCosSignal(10, booleanSignal = False)
-		rs = Signal("comparison", [x/10 for x in range(0, 95, 5)], [1,0] * 10, [1,-1] * 10)
+		rs = Signal("comparison", [x/10 for x in range(0, 95, 5)], ([1,0] * 10)[:-1], ([1,-1] * 10)[:-1])
 		rs.addCheckpoint(lastElement)
 		rs.recomputeDerivatives()
 		self.quantitativeValidationTestHelper(s1, s2, rs)

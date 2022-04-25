@@ -1,24 +1,26 @@
+""" Operation implementation for the untimed Eventually STL operation """
 from ..utility import Point, LineSegment
 from ..signals import Signal
 
 
-def __addAscendingResult(
-    signal: Signal, timeIndex: int, previousResult: float, output: Signal
-) -> None:
+def __addAscendingResult(signal: Signal, timeIndex: int, previousResult: float, output: Signal) -> None:
 	value = max(signal.getValue(timeIndex + 1), previousResult)
 	output.emplaceCheckpoint(signal.getTime(timeIndex), value, 0)
 
 
+# pylint: disable=unused-argument
 def __addLargerThanPreviousAndDescendingResult(
-    signal: Signal, timeIndex: int, previousResult: float, output: Signal
+    signal: Signal,
+    timeIndex: int,
+    previousResult: float,  # type: ignore
+    output: Signal
 ) -> None:
 	cp = signal.getCheckpoint(timeIndex)
 	output.addCheckpoint(cp)
 
 
-def __addSmallerThanPreviousResult(
-    signal: Signal, timeIndex: int, previousResult: float, output: Signal
-) -> None:
+# pylint: enable=unused-argument
+def __addSmallerThanPreviousResult(signal: Signal, timeIndex: int, previousResult: float, output: Signal) -> None:
 	output.emplaceCheckpoint(signal.getTime(timeIndex), previousResult, 0)
 
 
@@ -61,5 +63,4 @@ def computeUntimedEventually(signal: Signal) -> Signal:
 	# The 'eventually' value is then exactly the identity function.
 	output.addCheckpoint(signal.getCheckpoint(-1))
 	output.recomputeDerivatives()
-	output.simplify()
 	return output

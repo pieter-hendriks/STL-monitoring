@@ -1,3 +1,6 @@
+"""
+Module importing the formula nodes for the STL AST structures.
+"""
 from .andnode import AndNode
 from .comparisonoperatornode import ComparisonOperatorNode
 from .formulanode import FormulaNode

@@ -1,14 +1,14 @@
-from .operationnode import OperationNode
-from ....signals import SignalList, BooleanSignal, Signal, SignalValue
-from ....operators import computeAbsoluteValue
+""" Implementation of node representing ABS operation in STL formula """
 import math
 from typing import List
 
+from ..node import Node
+from ....signals import SignalList, BooleanSignal, Signal, SignalValue
+from ....operators import computeAbsoluteValue
 
-class AbsoluteValueNode(OperationNode):
 
-	def __init__(self):
-		super().__init__()
+class AbsoluteValueNode(Node):
+	""" AST tree node representing the STL operation ABS """
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
 		result = self.children[0].quantitativeValidate(signals, plot)
@@ -30,15 +30,11 @@ class AbsoluteValueNode(OperationNode):
 			# Derivative is computed later, so we can initialize it to 0 with no problem.
 			result.emplaceCheckpoint(t, 0, 0)
 		result.recomputeDerivatives()
-		result.simplify()
 		return computeAbsoluteValue(result)
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		# TODO: Verify correct! I think there isn't an absolute value in Boolean semantics.
-		# So just making it a no-op makes sense (except for setting name -- required for test equality)
 		result: Signal = self.children[0].booleanValidate(signals, plot)
 		result.setName('absolutevalue')
-		result.simplify()
 		return result
 
 	def text(self) -> str:

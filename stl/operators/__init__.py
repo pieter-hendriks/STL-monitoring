@@ -1,3 +1,4 @@
+""" Module defining the STL operations. """
 from .computeabsolutevalue import computeAbsoluteValue
 from .computeandor import computeAnd, computeOr
 from .computenot import computeNot

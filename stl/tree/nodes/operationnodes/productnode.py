@@ -1,5 +1,6 @@
+""" File containing the ProductNode implementation for STL ASTs """
 from .binaryoperationnode import BinaryOperationNode
 
+
 class ProductNode(BinaryOperationNode):
-	def __init__(self):
-		super().__init__()
+	""" Node used to represent the STL Multiplication operation in AST. """

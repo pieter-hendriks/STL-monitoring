@@ -1,25 +1,27 @@
-# Generated from stl.g4 by ANTLR 4.9.3
-# pylint: disable=unused-wildcard-import
-from antlr4 import *
+""" Custom STL Listener implementation """
 from antlr4 import TerminalNode
 from stl.parsing.stlListener import stlListener
-from stl.tree import *  # Imports all node types of STL tree
+from stl.tree import FormulaNode, NegationNode, FloatValueNode, AbsoluteValueNode
+from stl.tree import AndNode, BinaryOperationNode, ComparisonOperatorNode, ContentNode
+from stl.tree import IntValueNode, QuantitativeSignalNode, SignalNode, UntilNode
 
 if __name__ is not None and "." in __name__:
-	# pylint: disable=relative-beyond-top-level
 	from .stlParser import stlParser
 else:
 	from stl.parsing.stlParser import stlParser
 
 
 # This class defines a complete listener for a parse tree produced by stlParser.
+# pylint: disable=too-many-public-methods
 class CustomStlListener(stlListener):
+	""" Custom listener for STL parse tree. """
 
 	def __init__(self):
 		self.stlTree = None
 
 	# Split the tree, a.k.a. add a child = branch
 	def generateBranch(self, node, context):
+		""" Add a new child in the STL AST """
 		implicaton = False
 		# If former is an implication
 		if self.stlTree.negateNext == 2 and isinstance(node, FormulaNode):
@@ -46,6 +48,7 @@ class CustomStlListener(stlListener):
 
 	# If the node is a terminal node meaning a token
 	def visitTerminal(self, node: TerminalNode):
+		""" Visit a terminal node (token) in tree """
 		token = str(node)
 
 		if token in '[]{}();,':  # Ignore these tokens
@@ -54,9 +57,9 @@ class CustomStlListener(stlListener):
 
 	# Go back up the tree
 	def popStack(self):
+		""" Go back up one level in the tree """
 		# If node = negation and child too -> simplify
-		if isinstance(self.stlTree,
-		              NegationNode) and isinstance(self.stlTree.children[0], NegationNode):
+		if isinstance(self.stlTree, NegationNode) and isinstance(self.stlTree.children[0], NegationNode):
 			self.stlTree.parent.add(self.stlTree.children[0].children[0])
 			self.stlTree.parent.children.remove(self.stlTree)
 			self.stlTree.children[0].children[0].parent = self.stlTree.parent
@@ -154,9 +157,7 @@ class CustomStlListener(stlListener):
 		self.popStack()
 
 	# Enter a parse tree produced by stlParser#scope.
-	def enterScope(
-	    self, ctx: stlParser.ScopeContext
-	):  # Only here to make the tree in the right shape
+	def enterScope(self, ctx: stlParser.ScopeContext):  # Only here to make the tree in the right shape
 		pass
 
 	# Exit a parse tree produced by stlParser#scope.
@@ -270,15 +271,11 @@ class CustomStlListener(stlListener):
 		pass
 
 	# Exit a parse tree produced by stlParser#expressionScope.
-	def exitExpressionScope(
-	    self, ctx: stlParser.ExpressionScopeContext
-	):  # Only here to make the tree in the right shape
+	def exitExpressionScope(self, ctx: stlParser.ExpressionScopeContext):  # Only here to make the tree in the right shape
 		pass
 
 	# Enter a parse tree produced by stlParser#value.
-	def enterValue(
-	    self, ctx: stlParser.ValueContext
-	):  # Only here to make the tree in the right shape
+	def enterValue(self, ctx: stlParser.ValueContext):  # Only here to make the tree in the right shape
 		pass
 
 	# Exit a parse tree produced by stlParser#value.
@@ -294,15 +291,11 @@ class CustomStlListener(stlListener):
 		self.popStack()
 
 	# Enter a parse tree produced by stlParser#constant.
-	def enterConstant(
-	    self, ctx: stlParser.ConstantContext
-	):  # Only here to make the tree in the right shape
+	def enterConstant(self, ctx: stlParser.ConstantContext):  # Only here to make the tree in the right shape
 		pass
 
 	# Exit a parse tree produced by stlParser#constant.
-	def exitConstant(
-	    self, ctx: stlParser.ConstantContext
-	):  # Only here to make the tree in the right shape
+	def exitConstant(self, ctx: stlParser.ConstantContext):  # Only here to make the tree in the right shape
 		pass
 
 	# Enter a parse tree produced by stlParser#intValue.

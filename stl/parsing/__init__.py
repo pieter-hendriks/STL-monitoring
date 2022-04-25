@@ -1,3 +1,4 @@
+""" STL parsing functionality """
 from .customstllistener import CustomStlListener
 from .stlLexer import stlLexer
 from .stlListener import stlListener

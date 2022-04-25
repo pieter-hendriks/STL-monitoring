@@ -1,3 +1,4 @@
+""" Utility functions / helpers for STL implementation. """
 from .interval import Interval
 from .helpers import cm2inch, getSortedMergedListNoDuplicates
 from .singleton import Singleton

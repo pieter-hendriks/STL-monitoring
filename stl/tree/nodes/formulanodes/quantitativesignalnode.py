@@ -1,25 +1,19 @@
+""" Quantitative Signal Node for STL formulas """
 from .formulanode import FormulaNode
-import numpy
 from ....signals import Signal, BooleanSignal, SignalList
 
 
 class QuantitativeSignalNode(FormulaNode):
-
-	def __init__(self):
-		super().__init__()
+	""" Node in STL ASTs representing quantitative Signal. """
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
 		result: BooleanSignal = self.children[0].booleanValidate(signals, plot)
-		if plot:
-			self.booleanPlot(result)
-		result.simplify()
+		self.booleanPlot(plot, result)
 		return result
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
 		result: Signal = self.children[0].quantitativeValidate(signals, plot)
-		if plot:
-			self.quantitativePlot(result)
-		result.simplify()
+		self.quantitativePlot(plot, result)
 		return result
 
 	def text(self):
