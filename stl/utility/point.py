@@ -16,3 +16,8 @@ class Point:
 		# (B.y-A.y)/(B.x-A.x) < (C.y-A.y)/(C.x-A.x)
 		# ==> (B.y-A.y)(C.x-A.x) < (C.y-A.y)(B.x-A.x)
 		return (C.y - A.y) * (B.x - A.x) > (B.y - A.y) * (C.x - A.x)
+
+	def normalize(self) -> None:
+		""" Processes the point coordinates to make them compatible with STL operation.
+		At this time, this method rounds the time (x-coordinate) to 5 decimal digits."""
+		self.x = round(self.x, 5)

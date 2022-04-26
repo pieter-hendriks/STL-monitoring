@@ -62,11 +62,12 @@ class SignalValue:
 	def __eq__(self, other: 'SignalValue') -> bool:
 		if type(other) is not type(self):
 			super().__eq__(other)
-		return (
-		    math.isclose(self.timestamp, other.timestamp, rel_tol=1e-7)
-		    and math.isclose(self.value, other.value, rel_tol=1e-7)
-		    and math.isclose(self.derivative, other.derivative, rel_tol=1e-7)
-		)
+		return (self.timestamp == other.timestamp and self.value == other.value and self.derivative == other.derivative)
+		# return (
+		#     math.isclose(self.timestamp, other.timestamp, rel_tol=1e-7)
+		#     and math.isclose(self.value, other.value, rel_tol=1e-7)
+		#     and math.isclose(self.derivative, other.derivative, rel_tol=1e-7)
+		# )
 
 	def oldFormat(self) -> List[List[float]]:
 		""" Conver the SV to the old format; [[times], [values], [derivatives]] """

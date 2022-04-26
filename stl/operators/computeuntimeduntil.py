@@ -15,7 +15,7 @@ def computeUntimedUntil(lhsSignal: Signal, rhsSignal: Signal) -> Signal:
 	), "Operations can only be meaningfully performed for Signals of the same type."
 	signalType = type(lhsSignal)
 	allTimes: List[float] = getSortedMergedListNoDuplicates(lhsSignal.getTimes(), rhsSignal.getTimes())
-	previousValue: Signal = signalType.createConstant('previous', -1, allTimes)
+	previousValue: Signal = signalType.createConstant('previous', -1)
 	currentIndex = lhsSignal.getCheckpointCount() - 2
 	output: Signal = signalType("untimedUntil")
 	while currentIndex >= 0:
@@ -47,7 +47,7 @@ def computeUntimedUntil(lhsSignal: Signal, rhsSignal: Signal) -> Signal:
 			if currentInterval.contains(cp.getTime(), closed=False):
 				output.addCheckpoint(cp)
 		previousValue = signalType.createConstant(
-		    'previous', output.getValue(output.computeIndexForTime(lhsSignal.getTime(currentIndex))), allTimes
+		    'previous', output.getValue(output.computeIndexForTime(lhsSignal.getTime(currentIndex)))
 		)
 		currentIndex -= 1
 

@@ -7,8 +7,8 @@ class Interval:
 
 	def __init__(self, a: Number, b: Number):
 		assert isinstance(a, Number) and isinstance(b, Number), "A and B must both be Numbers when used in Interval"
-		self.lowerLimit = a
-		self.upperLimit = b
+		self.lowerLimit = round(a, 5)
+		self.upperLimit = round(b, 5)
 
 	def getLower(self) -> float:
 		""" Get the lower limit of the interval. """

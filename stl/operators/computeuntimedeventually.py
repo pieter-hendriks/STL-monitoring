@@ -34,6 +34,7 @@ def __addCrossesPreviousAndDescendingResult(
 	sigEnd: Point = Point(signal.getTime(timeIndex + 1), signal.getValue(timeIndex + 1))
 	signalSegment: LineSegment = LineSegment(sigStart, sigEnd)
 	intersect = LineSegment.computeIntersectionPoint(resultConstSignal, signalSegment)
+	intersect.normalize()
 	output.emplaceCheckpoint(intersect.x, intersect.y, 0)
 	output.addCheckpoint(signal.getCheckpoint(timeIndex))
 

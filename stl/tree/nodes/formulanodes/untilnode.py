@@ -34,7 +34,7 @@ class UntilNode(FormulaNode):
 		    x for x in childResults[0].getTimes() if childResults[0].getLargestTime() - interval.getUpper() >= x
 		]
 		intervalEndTimes = [x - interval.getUpper() for x in childResults[0].getTimes() if x - interval.getUpper() >= 0]
-		resultTimestamps = sorted(np.unique([*intervalStartTimes, *intervalEndTimes]))
+		resultTimestamps = sorted(np.unique([round(x, 5) for x in [*intervalStartTimes, *intervalEndTimes]]))
 
 		for t in resultTimestamps:
 			rhsInterval = childResults[1].computeInterval(interval + t, half_open=False)

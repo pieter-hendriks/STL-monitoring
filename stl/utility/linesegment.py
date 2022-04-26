@@ -1,5 +1,5 @@
 """ Module containing an implementation of a class representing a LineSegment in a 2D space. """
-from typing import Tuple, List, Union
+from typing import Tuple, List
 import math
 from .point import Point
 
@@ -14,7 +14,7 @@ class LineSegment:
 
 	def intersects(self, other: 'LineSegment') -> bool:
 		""" Method to check if the line segment X intersects the line segment Y\n
-				Implementation does not count a point on the line as an intersection."""
+				The edge points are excluded; if the intersection is at either A1==A2 or B1==B2, False is returned."""
 		# ACD and BCD must have opposite orientation if the line segments intersect
 		# ACD and BCD cannot both be counterclockwise (unless there is no intersection)
 		# Analogous for ABC and ABD
@@ -38,10 +38,23 @@ class LineSegment:
 		# So m1x + b1 == m2x + b2 ==> x = (b2-b1)/(m1-m2)
 		x = (b2-b1) / (m1-m2)
 
-		assert math.isclose(
-		    m1*x + b1, m2*x + b2, rel_tol=1e-7
-		), "Failed to find an intersection! Computed y-values do not match."
-		return Point(x, m1*x + b1)
+		# Compute the mean of the two computed y-values for the intersection
+		# In case this computation isn't numerically stable, these will be different - mean between them is best guess
+		# When stability is fine, they'll be equal and this computation will essentially be a no-op (minimal performance hit)
+
+		# Assume the magnitude
+		def magnitude(x):
+			return math.floor(abs(math.log(abs(x), 10))) if x != 0 else 0
+
+		magnitudes1 = (magnitude(m1) + magnitude(b1)) / 2
+		magnitudes2 = (magnitude(m2) + magnitude(b2)) / 2
+		if x == 0.35:
+			print("THIS ONE")
+		if magnitudes1 > 2 * magnitudes2:
+			return Point(x, m1*x + b1)
+		if magnitudes2 > 2 * magnitudes1:
+			return Point(x, m2*x + b2)
+		return Point(x, (m1*x + b1 + m2*x + b2) / 2)
 
 	def computeLineEquation(self) -> Tuple[float, float]:
 		""" LineSegment is stored as defined between points A and B.
@@ -51,40 +64,28 @@ class LineSegment:
 		return (slope, offset)
 
 	@classmethod
-	def computeIntersectionPoints(
-	    cls, lhsSegments: Union[List['LineSegment'], 'LineSegment'], rhsSegments: Union[List['LineSegment'],
-	                                                                                    'LineSegment']
-	) -> List[Point]:
+	def computeIntersectionPoints(cls, lhsSegments: List['LineSegment'], rhsSegments: List['LineSegment']) -> List[Point]:
 		""" Computes the points (pair<time, value>) where self and other intersect.\n
-		Returns a list of the intersection points. """
+		Returns a list of the intersection points.
+		PRECONDITION: All X-coordinates between the lines must be identical.
+			This is achieved by pre-processing using Signal.computeCheckpointsForComparableSignals"""
 		# Handle all the trivial cases!
-		if isinstance(lhsSegments, LineSegment):
-			assert isinstance(rhsSegments, LineSegment), "Must be same type."
-			if not lhsSegments.intersects(rhsSegments):
-				return []
-			return lhsSegments.computeIntersectionPoint(rhsSegments)
-
-		assert isinstance(lhsSegments, list) and isinstance(rhsSegments, list)
 		if not lhsSegments or not rhsSegments:
 			return []
-		assert isinstance(lhsSegments[0], LineSegment) and isinstance(rhsSegments[0], LineSegment)
 		# Compute the intersection points!
-		lhsIndex: int = 0
-		rhsIndex: int = 0
+		index: int = 0
 		points: List[Point] = []
+		if lhsSegments[0].A == rhsSegments[0].A:
+			points.append(lhsSegments[0].A)
 		while True:
-			if lhsSegments[lhsIndex].intersects(rhsSegments[rhsIndex]):
-				points.append(lhsSegments[lhsIndex].computeIntersectionPoint(rhsSegments[rhsIndex]))
+			if lhsSegments[index].B == rhsSegments[index].B:
+				points.append(lhsSegments[index].B)
+			if lhsSegments[index].intersects(rhsSegments[index]):
+				points.append(lhsSegments[index].computeIntersectionPoint(rhsSegments[index]))
 			# Exit after appending for the last segments if we've handled the entire lists
-			if lhsIndex == len(lhsSegments) - 1 and rhsIndex == len(rhsSegments) - 1:
+			if index == len(lhsSegments) - 1:
 				break
-			# Increment the correct counter - the one where the next time value is smallest.
-			if lhsIndex >= len(lhsSegments) - 1:
-				rhsIndex += 1
-			elif (rhsIndex >= len(rhsSegments) - 1 or lhsSegments[lhsIndex + 1].B.x <= rhsSegments[rhsIndex + 1].B.x):
-				lhsIndex += 1
-			else:
-				rhsIndex += 1
+			index += 1
 		return points
 
 	def __repr__(self):

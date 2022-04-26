@@ -27,8 +27,8 @@ class UntilNodeSetup(unittest.TestCase):
 		self.rightSignalChild.booleanValidate.return_value = s2
 
 	def setInterval(self, a: float, b: float):
-		aSig: Signal = Signal.createConstant("a", a, [0])
-		bSig: Signal = Signal.createConstant("b", b, [0])
+		aSig: Signal = Signal.createConstant("a", a)
+		bSig: Signal = Signal.createConstant("b", b)
 		self.intervalLowerBoundChild.quantitativeValidate.return_value = aSig
 		self.intervalLowerBoundChild.booleanValidate.return_value = aSig
 		self.intervalUpperBoundChild.quantitativeValidate.return_value = bSig

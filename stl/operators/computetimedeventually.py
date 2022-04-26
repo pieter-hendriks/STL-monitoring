@@ -27,7 +27,7 @@ def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
 	# Size of the interval we are keeping a maximum over. Using single variable is easier than working with an interval.
 	windowWidth: float = interval.getUpper() - interval.getLower()
 	# Set of potential maxima
-	maximumCandidates: List[float] = []
+	maximumCandidates: List[SignalValue] = []
 	# Initialize the output signal
 	out: Signal = signalType('timedEventually')
 	# in case of empty signal, return empty signal
@@ -42,8 +42,9 @@ def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
 	# Algorithm doesn't include the first timestep if windowWidth < first segment size.
 	# this bit adds that first element when necessary
 	if windowWidth < signal.getTime(1) - signal.getTime(0):
-		# Checkpoint 1 isn't part of the window yet, so value must be of checkpoint zero.
-		out.addCheckpoint(signal.getCheckpoint(0))
+		# Checkpoint 1 isn't part of the window yet, compute an initial value manually
+		initialMax = max(signal.getValue(0), signal.computeInterpolatedValue(windowWidth))
+		out.emplaceCheckpoint(signal.getTime(0), initialMax)
 		# Earliest next extremum can be is at next sample point
 		# so the algorithm will fill in the rest of the values.
 	# Iterate over all segments of the signal -- -1 because we have segment = [segmentIndex, segmentIndex+1]
@@ -55,16 +56,19 @@ def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
 		while maximumCandidates:
 			if maximumCandidates[0].getTime() < currentWindowLowerBound:
 				maximumCandidates.pop(0)
-			else:
-				break
+				continue
+			break
 		if segment[0].getValue() >= segment[1].getValue() or segment[1].getTime() > currentWindowUpperBound:
 			# Candidate is lower bound if lowerboundvalue >= upperboundvalue or if upperbound falls outside of current window.
-			maximumCandidates.append(segment[0])
+			# Check to see if last element of candidates == current to add;
+			# If it is, we've added it already and this would be silly.
+			if not maximumCandidates or maximumCandidates[-1] != segment[0]:
+				maximumCandidates.append(segment[0])
 		else:
 			# Other cases, the upper bound is the candidate (upper in window, upper > lower)
 			maximumCandidates.append(segment[1])
 		# Filter maximum candidates, remove values at second to last position until it's a sorted (descending) list again.
-		# This occurs, at the latest, when there is one element remaining. A one-element list is always sorted, in any order.
+		# This occurs, at the latest, when there is one element remaining. A one-element list is always sorted.
 		while len(maximumCandidates) >= 2:
 			# if new candidate is larger, the previous one will never again be useful.
 			if maximumCandidates[-2].getValue() < maximumCandidates[-1].getValue():
@@ -75,7 +79,7 @@ def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
 			# Add to output
 			# Timestamp = windowLowerBound (==segmentUpperBound - windowWidth)
 			# (e.g. for signal ([0, 10], [0, 1]) with windowSize 0.5, a sample with value 1 at timestep 9.5 must be created)
-			out.emplaceCheckpoint(currentWindowLowerBound, maximumCandidates[0].getValue(), 0)
+			out.emplaceCheckpoint(round(currentWindowLowerBound, 5), maximumCandidates[0].getValue(), 0)
 	out.recomputeDerivatives()
 	return out
 
