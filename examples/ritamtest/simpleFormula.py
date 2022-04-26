@@ -1,5 +1,4 @@
 # pylint: disable-all
-from lib2to3.pytree import convert
 import os
 import sys
 import cProfile
@@ -7,12 +6,11 @@ import pstats
 import random
 from unittest import mock
 
-print(os.getcwd())
-sys.path.insert(0, os.getcwd() + '/stlTool')
+sys.path.insert(0, os.getcwd())
 from stl.signals import Signal
 from stl.tree import ContentNode, UntilNode
 
-FILE_PREFIX = "stlTool/examples/ritamtest/"
+FILE_PREFIX = "examples/ritamtest/"
 # Size in counts
 TIME_MAX = 1000
 SIGNAL_MAGNITUDE = 250
