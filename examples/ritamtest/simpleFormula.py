@@ -18,11 +18,11 @@ TIME_MAX = 1000
 SIGNAL_MAGNITUDE = 250
 # Best to lower SIGNAL_SIZE (and maybe INTERVAL_UB) if efficient == False,
 # Syntax algorithm is significantly slower.
-EFFICIENT = False
+EFFICIENT = True
 SIMPLE = True
 
-for SIGNAL_SIZE in [2500, 5000]:  #, 5000, 10000, 20000, 40000, 80000]:
-	for INTERVAL_UB in [10]:  #, 200]:  # LB is always zero - minor modifications may be needed if it should be modified.
+for SIGNAL_SIZE in [2500, 5000, 10000, 20000, 40000, 80000]:
+	for INTERVAL_UB in [10, 200]:  # LB is always zero - minor modifications may be needed if it should be modified.
 		FILENAME = f"{FILE_PREFIX}{INTERVAL_UB}_{SIGNAL_SIZE}_{'efficient' if EFFICIENT else 'syntax'}_{'simple' if SIMPLE else 'complex'}_stats"
 		random.seed(1)
 
