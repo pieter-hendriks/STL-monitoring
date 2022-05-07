@@ -1,3 +1,4 @@
+# pylint: disable-all
 import os
 import pickle
 from stl.signals import Signal, SignalList
@@ -44,9 +45,7 @@ else:
 		cartSignals, poleSignals = pickle.load(f)
 
 # Create the STL tree from given formula file
-parser = stlParse.stlParser(
-    a4.CommonTokenStream(stlParse.stlLexer(a4.FileStream(formulaFile, encoding='utf-8')))
-)
+parser = stlParse.stlParser(a4.CommonTokenStream(stlParse.stlLexer(a4.FileStream(formulaFile, encoding='utf-8'))))
 tree = parser.content()
 listener = stlParse.CustomStlListener()
 walker = a4.ParseTreeWalker()
@@ -78,19 +77,18 @@ def computeRobustness():
 	else:
 		with open(robustnessesFile, "rb") as f:
 			robustnesses = pickle.load(f)
+	return robustnesses
 
 
 cProfile.run('computeRobustness()', 'efficientProfile')
 exit(0)
 
-import matplotlib.pyplot as plt
-
-plt.plot(
-    [i for i in range(len(robustnesses))], [min(r.getValues()) for r in robustnesses], color='blue'
-)
-plt.plot([i for i in range(len(robustnesses))], [0] * len(robustnesses), color='red')
-plt.title("Minimum robustness per training episode")
-plt.show()
+# import matplotlib.pyplot as plt
+# robustnesses = computeRobustness()
+# plt.plot([i for i in range(len(robustnesses))], [min(r.getValues()) for r in robustnesses], color='blue')
+# plt.plot([i for i in range(len(robustnesses))], [0] * len(robustnesses), color='red')
+# plt.title("Minimum robustness per training episode")
+# plt.show()
 
 # 	# Validate the signals with the STL formula
 # 	result = stlTree.validate(signals2, semantic=argv[3].lower(), plot=True)
