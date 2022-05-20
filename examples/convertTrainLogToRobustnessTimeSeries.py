@@ -9,11 +9,12 @@ import stl
 import antlr4 as a4
 import numpy as np
 
-
+# TODO: Change path back to data_converted.py rather than data_converted_FAKE.py
+# Change made to allow some debugging
 def convertCartpole():
 	""" Handle conversion from training log to robustness time series for the Cartpole environment """
-	signals = {0: 'p', 2: 'c'}
-	outFile = 'stlTool/examples/cartpole/data_converted.py'
+	signals = {0: 'c', 2: 'p'}
+	outFile = 'stlTool/examples/cartpole/data_converted_FAKE.py'
 	if os.path.exists(outFile):
 		print(
 		    "The output path already exists - assuming computation is unnecessary. Please rename target file if required."
@@ -42,9 +43,9 @@ def convertMountaincar():
 
 
 def __conversionHelper(stlFormula, signals, minLength, data, outputPath):
-	""" Helper function to handle conversion from training log to robustness timeseries 
+	""" Helper function to handle conversion from training log to robustness timeseries
 	stlFormula is the (string form) formula we base the robustness computation on
-	Signals should be dictionary: {observationIndex: name}. 
+	Signals should be dictionary: {observationIndex: name}.
 	Data should be a list of training episodes that we will compute the robustness over, using the given stlFormula.
 	Output path is a file to write the result to."""
 	parser = stl.parsing.stlParser(a4.CommonTokenStream(stl.parsing.stlLexer(a4.InputStream(stlFormula))))
@@ -73,14 +74,23 @@ def __conversionHelper(stlFormula, signals, minLength, data, outputPath):
 			currentSignals.append(stl.signals.Signal(signalName, signalTimestamps, signalValues))
 		result = stlTree.validate(currentSignals)
 		results.append((currentSignals, result))
+		print(currentSignals[0])
+		print(currentSignals[1])
+		print(result)
+
+		with open("mytree.dot", "w") as f:
+			stlTree.toDot(f)
+
+		exit(1)
+
 		if index % 10 == 0:
 			print(f"Handled index={index} robustness computation!")
 
-	with open(outputPath, 'w') as f:
-		f.write("import os\nimport sys\nsys.path.insert(0, f'{os.getcwd()}/stlTool')\nfrom stl.signals import Signal\n")
-		f.write("data = [\n\t")
-		f.write(',\n\t'.join(x.__str__() for x in results))
-		f.write("\n]")
+	# with open(outputPath, 'w') as f:
+	# 	f.write("import os\nimport sys\nsys.path.insert(0, f'{os.getcwd()}/stlTool')\nfrom stl.signals import Signal\n")
+	# 	f.write("data = [\n\t")
+	# 	f.write(',\n\t'.join(x.__str__() for x in results))
+	# 	f.write("\n]")
 
 
 convertCartpole()
