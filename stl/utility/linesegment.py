@@ -36,25 +36,8 @@ class LineSegment:
 		m2, b2 = other.computeLineEquation()
 		# y1 must equal y2 to have an intersection (for line equation y=mx+b)
 		# So m1x + b1 == m2x + b2 ==> x = (b2-b1)/(m1-m2)
-		x = (b2-b1) / (m1-m2)
-
-		# Compute the mean of the two computed y-values for the intersection
-		# In case this computation isn't numerically stable, these will be different - mean between them is best guess
-		# When stability is fine, they'll be equal and this computation will essentially be a no-op (minimal performance hit)
-
-		# Assume the magnitude
-		def magnitude(x):
-			return math.floor(abs(math.log(abs(x), 10))) if x != 0 else 0
-
-		magnitudes1 = (magnitude(m1) + magnitude(b1)) / 2
-		magnitudes2 = (magnitude(m2) + magnitude(b2)) / 2
-		if x == 0.35:
-			print("THIS ONE")
-		if magnitudes1 > 2 * magnitudes2:
-			return Point(x, m1*x + b1)
-		if magnitudes2 > 2 * magnitudes1:
-			return Point(x, m2*x + b2)
-		return Point(x, (m1*x + b1 + m2*x + b2) / 2)
+		x = round((b2-b1) / (m1-m2), 5)
+		return Point(x, m1*x + b1)
 
 	def computeLineEquation(self) -> Tuple[float, float]:
 		""" LineSegment is stored as defined between points A and B.

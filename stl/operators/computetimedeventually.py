@@ -4,7 +4,7 @@ from ..signals import Signal, SignalValue
 from ..utility import Interval
 
 # pylint: disable=too-many-branches
-def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
+def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	"""
 	Computes timed eventually STL operation. Creates a new Signal instance to hold the result.
 	Timed Eventually is the supremum of the signal over the interval.
@@ -14,16 +14,15 @@ def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
 	https://arxiv.org/abs/cs/0610046
 
 	Modifications:  - Use time values rather than indices
-									- Eliminate the use of L and the min-computation
-									- Swap code around - extra insert before main alg instead of after
-									- Remove requirement for w > 2
+	                - Eliminate the use of L and the min-computation
+	                - Swap code around - extra insert before main alg instead of after
+	                - Remove requirement for w > 2
 	"""
-	signalType = type(signal)
-	# Copy the signal so we don't modify the object outside of this function
-	signal: Signal = signalType.fromCheckpoints('copy', signal.getCheckpoints())
+	signalType = type(inSignal)
+
 	# Drop the prefix we ignore (lower bound of the interval) and shift the signal back to the same start time.
-	signal = signal.computeInterval(Interval(interval.getLower() + signal.getTime(0), float('inf')))
-	signal = signal.shift(-1 * interval.getLower())
+	signal = inSignal.computeInterval(Interval(interval.getLower() + inSignal.getTime(0), float('inf')))
+	signal = inSignal.shift(-1 * interval.getLower())
 	# Size of the interval we are keeping a maximum over. Using single variable is easier than working with an interval.
 	windowWidth: float = interval.getUpper() - interval.getLower()
 	# Set of potential maxima
@@ -80,6 +79,15 @@ def computeTimedEventually(signal: Signal, interval: Interval) -> Signal:
 			# Timestamp = windowLowerBound (==segmentUpperBound - windowWidth)
 			# (e.g. for signal ([0, 10], [0, 1]) with windowSize 0.5, a sample with value 1 at timestep 9.5 must be created)
 			out.emplaceCheckpoint(round(currentWindowLowerBound, 5), maximumCandidates[0].getValue(), 0)
+	# Compute the expected timestamp set, then remove all unexpected timestamps
+	offset = interval.getUpper() if interval.getUpper() != float('inf') else interval.getLower()
+	times = [
+	    round(x - offset, 5) for x in filter( # If x in interval [0, a[, don't include. 
+	        lambda x: x >= offset and x >= interval.getLower(),  
+	        inSignal.getTimes(), # If x < 0 after subtraction, don't include. 
+	    )
+	]
+	out.filterTimes(times)
 	out.recomputeDerivatives()
 	return out
 

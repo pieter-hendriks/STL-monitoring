@@ -8,3 +8,5 @@ from .computeuntimedeventually import computeUntimedEventually
 from .computetimeduntil import computeTimedUntil
 from .computeuntimeduntil import computeUntimedUntil
 from .computeuntimedalways import computeUntimedAlways
+from .computesyntaxuntil import computeSyntaxUntil
+from .computebooleanuntil import computeBooleanUntil

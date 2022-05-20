@@ -63,5 +63,6 @@ def computeUntimedEventually(signal: Signal) -> Signal:
 	# The output at the last checkpoint is exactly the input, because we have no further data points.
 	# The 'eventually' value is then exactly the identity function.
 	output.addCheckpoint(signal.getCheckpoint(-1))
+	assert output.getTimes() == signal.getTimes(), "Unexpected timestamp mismatch in untimedeventually"
 	output.recomputeDerivatives()
 	return output
