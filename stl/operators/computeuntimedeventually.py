@@ -27,13 +27,13 @@ def __addSmallerThanPreviousResult(signal: Signal, timeIndex: int, previousResul
 def __addCrossesPreviousAndDescendingResult(
     signal: Signal, timeIndex: int, previousResult: float, output: Signal
 ) -> None:
-	constStart: Point = Point(signal.getTime(timeIndex), previousResult)
-	constEnd: Point = Point(signal.getTime(timeIndex + 1), previousResult)
-	resultConstSignal: LineSegment = LineSegment(constStart, constEnd)
+	constPreviousStart: Point = Point(signal.getTime(timeIndex), previousResult)
+	constPreviousEnd: Point = Point(signal.getTime(timeIndex + 1), previousResult)
+	constPreviousSegment: LineSegment = LineSegment(constPreviousStart, constPreviousEnd)
 	sigStart: Point = Point(signal.getTime(timeIndex), signal.getValue(timeIndex))
 	sigEnd: Point = Point(signal.getTime(timeIndex + 1), signal.getValue(timeIndex + 1))
 	signalSegment: LineSegment = LineSegment(sigStart, sigEnd)
-	intersect = LineSegment.computeIntersectionPoint(resultConstSignal, signalSegment)
+	intersect = LineSegment.computeIntersectionPoint(constPreviousSegment, signalSegment)
 	intersect.normalize()
 	output.emplaceCheckpoint(intersect.x, intersect.y, 0)
 	output.addCheckpoint(signal.getCheckpoint(timeIndex))
@@ -46,7 +46,9 @@ def computeUntimedEventually(signal: Signal) -> Signal:
 	# Step computation by applying the property at t = t{i+1} (= time of sample i+1)
 	signalType = type(signal)
 	output: Signal = signalType("untimedEventually")
-	previousIterationResult: float = -1
+	if signal.isEmpty():
+		return output
+	previousIterationResult: float = float('-inf')
 	for timeIndex in reversed(range(signal.getCheckpointCount() - 1)):
 		if signal.getValue(timeIndex) <= signal.getValue(timeIndex + 1):
 			__addAscendingResult(signal, timeIndex, previousIterationResult, output)
@@ -63,6 +65,6 @@ def computeUntimedEventually(signal: Signal) -> Signal:
 	# The output at the last checkpoint is exactly the input, because we have no further data points.
 	# The 'eventually' value is then exactly the identity function.
 	output.addCheckpoint(signal.getCheckpoint(-1))
-	assert output.getTimes() == signal.getTimes(), "Unexpected timestamp mismatch in untimedeventually"
+
 	output.recomputeDerivatives()
 	return output

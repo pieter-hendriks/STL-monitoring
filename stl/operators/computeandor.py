@@ -13,13 +13,10 @@ def __andOrHelper(lhs: Signal, rhs: Signal, operator: Callable = None) -> Signal
 	lhs, rhs = Signal.computeComparableSignals(lhs, rhs)
 	result: Signal = Signal("andor")
 	for i in range(lhs.getCheckpointCount()):
-		if lhs.getValue(i) == rhs.getValue(i):
+		if operator(lhs.getValue(i), rhs.getValue(i)):
 			result.addCheckpoint(lhs.getCheckpoint(i))
 		else:
-			if operator(lhs.getValue(i), rhs.getValue(i)):
-				result.addCheckpoint(lhs.getCheckpoint(i))
-			else:
-				result.addCheckpoint(rhs.getCheckpoint(i))
+			result.addCheckpoint(rhs.getCheckpoint(i))
 	result.recomputeDerivatives()
 	return result
 

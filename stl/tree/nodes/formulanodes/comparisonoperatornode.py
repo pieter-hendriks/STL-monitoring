@@ -31,12 +31,11 @@ class ComparisonOperatorNode(FormulaNode):
 		self.operation = ComparisonOperatorNode.OPERATORS[self.filter]
 
 	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		lhs = self.children[0].booleanValidate(signals, plot)
-		rhs = self.children[1].booleanValidate(signals, plot)
+		lhs: BooleanSignal = self.children[0].booleanValidate(signals, plot)
+		rhs: BooleanSignal = self.children[1].booleanValidate(signals, plot)
 		result: BooleanSignal = BooleanSignal('comparison')
 		assert isinstance(lhs, BooleanSignal), "Input to boolean validate should always be BooleanSignal instances."
 		assert isinstance(rhs, BooleanSignal), "Input to boolean validate should always be BooleanSignal instances."
-		# We can't have intermediate equalities in BooleanSignals, so we don't have to perform this step
 		lhs, rhs = BooleanSignal.computeComparableSignals(lhs, rhs)
 		for i in range(lhs.getCheckpointCount()):
 			comparisonResult = self.operation(lhs.getValue(i), rhs.getValue(i))
@@ -45,8 +44,8 @@ class ComparisonOperatorNode(FormulaNode):
 		return result
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:
-		lhs = self.children[0].quantitativeValidate(signals, plot)
-		rhs = self.children[1].quantitativeValidate(signals, plot)
+		lhs: Signal = self.children[0].quantitativeValidate(signals, plot)
+		rhs: Signal = self.children[1].quantitativeValidate(signals, plot)
 		result: Signal = Signal('comparison')
 		assert isinstance(lhs, Signal) and not isinstance(lhs, BooleanSignal)
 		assert isinstance(rhs, Signal) and not isinstance(rhs, BooleanSignal)

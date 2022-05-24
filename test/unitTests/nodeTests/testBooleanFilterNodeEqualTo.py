@@ -1,11 +1,8 @@
 import unittest
-import unittest.mock as mock
-from xmlrpc.client import Boolean
 from .helpers import getCosSignal, getShiftedCosSignal
 from stl.signals.signalvalue import SignalValue
 from .testBooleanFilterNode import ComparisonOperatorNodeTest
 from stl.signals import Signal, BooleanSignal, SignalValue
-import math
 
 
 class BooleanFilterNodeEqualToTest(ComparisonOperatorNodeTest):

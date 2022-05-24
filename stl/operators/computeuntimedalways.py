@@ -23,6 +23,5 @@ def computeUntimedAlways(signal: Signal) -> Signal:
 	eventuallyNotSignal: signalType = computeUntimedEventually(notSignal)
 	alwaysSignal: signalType = computeNot(eventuallyNotSignal)
 	alwaysSignal.setName("untimedAlways")
-	assert signal.getTimes() == alwaysSignal.getTimes(), 'Unexpected times mismatch in untimedalways'
 	# always = not(eventually(not x))
 	return alwaysSignal

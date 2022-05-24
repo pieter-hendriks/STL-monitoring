@@ -4,12 +4,13 @@ import unittest.mock as mock
 from stl.tree import ContentNode
 from stl.signals import Signal, BooleanSignal
 
+
 class ContentNodeTest(unittest.TestCase):
+
 	def setUp(self):
 		self.node = ContentNode()
 		self.child = mock.Mock()
 		self.node.children = [self.child]
-
 
 	def testSemanticDistribution(self):
 		# Content node is the node handling distribution between the two semantics functions.
@@ -23,12 +24,6 @@ class ContentNodeTest(unittest.TestCase):
 		self.child.booleanValidate.return_value = result
 		self.assertEqual(self.node.validate(None, 'boolean', False), result)
 		self.child.booleanValidate.assert_called_once_with(None, False)
-
-
-		
-
-	# TODO: Figure out if we have to / if there's a way to test the visualization.
-	# Current tests disable 'plot' everywhere.
 
 
 if __name__ == "__main__":

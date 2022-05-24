@@ -499,7 +499,8 @@ class Signal:
 		Used to filter the output from functions to the expected output times. """
 		index = 0
 		while index < self.getCheckpointCount():
-			if self.getTime(index) != times[index]:
+			# if times has an extra checkpoint, just skip it
+			if times[index] > self.getTime(index):
 				self.removeCheckpoint(index)
 			else:
 				index += 1

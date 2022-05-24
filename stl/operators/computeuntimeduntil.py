@@ -9,16 +9,19 @@ from .computeuntimedeventually import computeUntimedEventually
 
 # pylint: disable=too-many-locals
 def computeUntimedUntil(lhsSignal: Signal, rhsSignal: Signal) -> Signal:
-	""" Computes untimed until STL operation. Creates a new Signal instance to hold the result. 
-	Expects two signals with equal timestamps as input (i.e. after Signal.createComparableSignals(lhs,rhs))"""
+	""" Computes untimed until STL operation. Creates a new Signal instance to hold the result. """
 	assert isinstance(
 	    lhsSignal, type(rhsSignal)
 	), "Operations can only be meaningfully performed for Signals of the same type."
 	signalType = type(lhsSignal)
 	# allTimes: List[float] = getSortedMergedListNoDuplicates(lhsSignal.getTimes(), rhsSignal.getTimes())
 	previousValue: Signal = signalType.createConstant('previous', -1)
-	currentIndex = lhsSignal.getCheckpointCount() - 2
 	output: Signal = signalType("untimedUntil")
+	lhsSignal, rhsSignal = Signal.computeComparableSignals(lhsSignal, rhsSignal)
+	if lhsSignal.isEmpty():  # rhsSignal will also be empty
+		return output  # Return empty result
+
+	currentIndex = lhsSignal.getCheckpointCount() - 2
 	while currentIndex >= 0:
 		currentInterval: Interval = Interval(lhsSignal.getTime(currentIndex), lhsSignal.getTime(currentIndex + 1))
 		currentLhsInterval: Signal = lhsSignal.computeInterval(currentInterval)

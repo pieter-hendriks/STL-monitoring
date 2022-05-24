@@ -8,10 +8,8 @@ from .computeuntimeduntil import computeUntimedUntil
 
 
 def computeTimedUntil(lhsSignal: Signal, rhsSignal: Signal, interval: Interval) -> Signal:
-	""" Computes the timed until STL operation. Creates a new Signal instance to hold the result. 
-	This method should be called with two signals that have equal sets of timestamps (i.e. after Signal.computeComparableSignals(lhs, rhs))"""
-	assert lhsSignal.getTimes() == rhsSignal.getTimes(), "Expected equal timestamps."
-
+	""" Computes the timed until STL operation. Creates a new Signal instance to hold the result. """
+	lhsSignal, rhsSignal = Signal.computeComparableSignals(lhsSignal, rhsSignal)
 	assert isinstance(lhsSignal, type(rhsSignal)) and isinstance(
 	    rhsSignal, type(lhsSignal)
 	), "Operations can only meaningfully be performed on Signals of the same type."

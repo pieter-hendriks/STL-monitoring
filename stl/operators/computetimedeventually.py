@@ -19,7 +19,10 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	                - Remove requirement for w > 2
 	"""
 	signalType = type(inSignal)
-
+	# Initialize the output signal
+	out: Signal = signalType('timedEventually')
+	if inSignal.isEmpty():
+		return out
 	# Drop the prefix we ignore (lower bound of the interval) and shift the signal back to the same start time.
 	signal = inSignal.computeInterval(Interval(interval.getLower() + inSignal.getTime(0), float('inf')))
 	signal = inSignal.shift(-1 * interval.getLower())
@@ -27,8 +30,6 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	windowWidth: float = interval.getUpper() - interval.getLower()
 	# Set of potential maxima
 	maximumCandidates: List[SignalValue] = []
-	# Initialize the output signal
-	out: Signal = signalType('timedEventually')
 	# in case of empty signal, return empty signal
 	if signal.isEmpty():
 		return out

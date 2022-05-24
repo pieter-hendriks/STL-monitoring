@@ -25,10 +25,7 @@ class UntilNode(FormulaNode):
 		""" Prepares the data for use with the efficient algorithm and then calls the operation """
 		if len(self.children) in [2, 4]:
 			childSignals = SignalList(
-			    Signal.computeComparableSignals(
-			        self.children[0].quantitativeValidate(signals, plot),
-			        self.children[-1].quantitativeValidate(signals, plot)
-			    )
+			    self.children[0].quantitativeValidate(signals, plot), self.children[-1].quantitativeValidate(signals, plot)
 			)
 		if len(self.children) == 1:
 			# Untimed eventually -- no time interval children, 1 signal child
@@ -53,36 +50,26 @@ class UntilNode(FormulaNode):
 		# If we have four children, we have a timed until operation (lhs, interval (lower & upper), rhs)
 		if len(self.children) == 4:
 			childResults: SignalList = SignalList(
-			    Signal.computeComparableSignals(
-			        self.children[0].quantitativeValidate(signals, plot),
-			        self.children[3].quantitativeValidate(signals, plot)
-			    )
+			    self.children[0].quantitativeValidate(signals, plot), self.children[3].quantitativeValidate(signals, plot)
 			)
 			name = "timedUntil"
 		# If we have three children, we have a timed eventually operation (interval (lower & upper), rhs)
 		elif len(self.children) == 3:
 			childResults: SignalList = SignalList(
-			    Signal.computeComparableSignals(
-			        Signal.createConstant('DummyTrueSignal', 1), self.children[2].quantitativeValidate(signals, plot)
-			    )
+			    Signal.createConstant('DummyTrueSignal', 1), self.children[2].quantitativeValidate(signals, plot)
 			)
 			name = "timedEventually"
 		# If we have two children, we have an untimed until operation (lhs, rhs)
 		elif len(self.children) == 2:
 			childResults: SignalList = SignalList(
-			    Signal.computeComparableSignals(
-			        self.children[0].quantitativeValidate(signals, plot),
-			        self.children[1].quantitativeValidate(signals, plot)
-			    )
+			    self.children[0].quantitativeValidate(signals, plot), self.children[1].quantitativeValidate(signals, plot)
 			)
 			name = "untimedUntil"
 		# Else we must have 1 child, which is the untimed eventually operation (rhs)
 		else:
 			assert len(self.children) == 1, "Invalid amount of children for until node."
 			childResults: SignalList = SignalList(
-			    Signal.computeComparableSignals(
-			        Signal.createConstant('DummyTrueSignal', 1), self.children[0].quantitativeValidate(signals, plot)
-			    )
+			    Signal.createConstant('DummyTrueSignal', 1), self.children[0].quantitativeValidate(signals, plot)
 			)
 			name = "untimedEventually"
 		# Get the interval limit values for the interval [a, b]
@@ -96,7 +83,7 @@ class UntilNode(FormulaNode):
 
 		assert all(x == s.getValue(0) for s in [aSignal, bSignal] for x in s.getValues())
 		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
-		result = computeSyntaxUntil(childResults, interval)
+		result = computeSyntaxUntil(childResults[0], childResults[1], interval)
 		result.setName(name)
 		return result
 
@@ -116,7 +103,6 @@ class UntilNode(FormulaNode):
 			childResults: SignalList = SignalList(
 			    [self.children[0].booleanValidate(signals, plot), self.children[3].booleanValidate(signals, plot)]
 			)
-			childResults = SignalList(Signal.computeComparableSignals(childResults[0], childResults[1]))
 		else:
 			assert len(self.children) == 3
 			childResult: BooleanSignal = self.children[2].booleanValidate(signals, plot)

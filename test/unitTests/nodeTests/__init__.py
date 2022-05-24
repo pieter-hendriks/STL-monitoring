@@ -1,10 +1,9 @@
 """ Tests for all of the STL nodes """
-from .testAbsoluteValueNode import AbsoluteValueNodeTest
-from .testAndNode import AndNodeTest
 from .testBinaryOperationNodeDivision import BinaryOperationNodeDivisionTest
 from .testBinaryOperationNodeProduct import BinaryOperationNodeProductTest
 from .testBinaryOperationNodeSubtract import BinaryOperationNodeSubtractTest
 from .testBinaryOperationNodeSum import BinaryOperationNodeSumTest
+from .testBooleanAndNode import AndNodeTest
 from .testBooleanFilterNodeEqualTo import BooleanFilterNodeEqualToTest
 from .testBooleanFilterNodeGreaterThan import BooleanFilterNodeGreaterThanTest
 from .testBooleanFilterNodeGreaterThanOrEqualTo import BooleanFilterNodeGreaterThanOrEqualToTest
@@ -14,6 +13,4 @@ from .testBooleanFilterNodeNotEqualTo import BooleanFilterNodeNotEqualToTest
 from .testContentNode import ContentNodeTest
 from .testFloatValueNode import FloatValueNodeTest
 from .testIntValueNode import IntValueNodeTest
-from .testNegationNode import NegationNodeTest
 from .testSignalNode import SignalNodeTest
-from .testUntilNode import UntilNodeTest
