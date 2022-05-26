@@ -2,12 +2,12 @@ import unittest
 import unittest.mock as mock
 from .helpers import getCosSignal, getShiftedCosSignal
 from stl.signals.signalvalue import SignalValue
-from .testBooleanFilterNode import ComparisonOperatorNodeTest
+from .testComparisonOperatorNode import ComparisonOperatorNodeTest
 from stl.signals import Signal, BooleanSignal, SignalValue
 import math
 
 
-class BooleanFilterNodeGreaterThanTest(ComparisonOperatorNodeTest):
+class ComparisonOperatorNodeGreaterThanTest(ComparisonOperatorNodeTest):
 
 	def setUp(self):
 		super().setUp()
