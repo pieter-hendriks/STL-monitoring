@@ -110,6 +110,33 @@ class TimedUntilTest(unittest.TestCase):
 		self.assertEqual(computeTimedUntil(left, right, interval), expectedResult)
 		self.assertEqual(computeSyntaxUntil(left, right, interval), expectedResult)
 
+	def testBooleanUntilLhsTimes(self):
+		lhs = BooleanSignal("l", [0, 1], [1, 0])
+		rhs = BooleanSignal("r", [0, 1], [0, 1])
+		interval = Interval(0, 1)
+		expected = BooleanSignal("booleanTimedUntil", [0], [1])
+		self.assertEqual(computeBooleanUntil(lhs, rhs, interval), expected)
+
+	def testBooleanUntilRhsTimes(self):
+		lhs = BooleanSignal("l", [0, 1], [0, 1])
+		rhs = BooleanSignal("r", [0, 1], [1, 0])
+		interval = Interval(0, 1)
+		expected = BooleanSignal("booleanTimedUntil", [0], [0])
+		self.assertEqual(computeBooleanUntil(lhs, rhs, interval), expected)
+
+	def testBooleanUntilLargeTimegap(self):
+		lhs = BooleanSignal("l", [0, 0.5, 2], [1, 1, 0])
+		rhs = BooleanSignal("r", [0, 1.5, 2], [0, 0, 1])
+		interval = Interval(0, 1)
+		expected = BooleanSignal("booleanTimedUntil", [0, 0.5, 1], [0, 0, 1])
+		self.assertEqual(computeBooleanUntil(lhs, rhs, interval), expected)
+
+		lhs = BooleanSignal("l", [0, 0.5, 2], [1, 0, 0])
+		rhs = BooleanSignal("r", [0, 1.5, 2], [0, 0, 1])
+		interval = Interval(0, 1)
+		expected = BooleanSignal("booleanTimedUntil", [0, 0.5, 1], [0, 0, 0])
+		self.assertEqual(computeBooleanUntil(lhs, rhs, interval), expected)
+
 
 if __name__ == "__main__":
 	unittest.main()

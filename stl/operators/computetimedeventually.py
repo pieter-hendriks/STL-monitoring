@@ -30,9 +30,6 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	windowWidth: float = interval.getUpper() - interval.getLower()
 	# Set of potential maxima
 	maximumCandidates: List[SignalValue] = []
-	# in case of empty signal, return empty signal
-	if signal.isEmpty():
-		return out
 	# In case of Singular signal, return either a) the signal itself, in case of singular interval
 	#                                           b) an empty signal, in case of non-singular interval
 	if signal.isSingular():
@@ -53,11 +50,8 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 		currentWindowLowerBound: float = segment[1].getTime() - windowWidth
 		currentWindowUpperBound: float = segment[1].getTime()
 		# Filter the set of candidates -- if timestamp is lower than what we're currently working on, it's not useful
-		while maximumCandidates:
-			if maximumCandidates[0].getTime() < currentWindowLowerBound:
-				maximumCandidates.pop(0)
-				continue
-			break
+		while maximumCandidates and maximumCandidates[0].getTime() < currentWindowLowerBound:
+			maximumCandidates.pop(0)
 		if segment[0].getValue() >= segment[1].getValue() or segment[1].getTime() > currentWindowUpperBound:
 			# Candidate is lower bound if lowerboundvalue >= upperboundvalue or if upperbound falls outside of current window.
 			# Check to see if last element of candidates == current to add;
@@ -69,12 +63,9 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 			maximumCandidates.append(segment[1])
 		# Filter maximum candidates, remove values at second to last position until it's a sorted (descending) list again.
 		# This occurs, at the latest, when there is one element remaining. A one-element list is always sorted.
-		while len(maximumCandidates) >= 2:
+		while len(maximumCandidates) >= 2 and maximumCandidates[-2].getValue() < maximumCandidates[-1].getValue():
 			# if new candidate is larger, the previous one will never again be useful.
-			if maximumCandidates[-2].getValue() < maximumCandidates[-1].getValue():
-				maximumCandidates.pop(-2)
-			else:
-				break
+			maximumCandidates.pop(-2)
 		if segment[1].getTime() >= windowWidth: # Assumes signal.getTime(0) == 0, which by our shifts must be the case
 			# Add to output
 			# Timestamp = windowLowerBound (==segmentUpperBound - windowWidth)

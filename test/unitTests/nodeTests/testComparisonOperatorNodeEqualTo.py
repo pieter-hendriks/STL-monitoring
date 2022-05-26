@@ -1,11 +1,11 @@
 import unittest
 from .helpers import getCosSignal, getShiftedCosSignal
 from stl.signals.signalvalue import SignalValue
-from .testBooleanFilterNode import ComparisonOperatorNodeTest
+from .testComparisonOperatorNode import ComparisonOperatorNodeTest
 from stl.signals import Signal, BooleanSignal, SignalValue
 
 
-class BooleanFilterNodeEqualToTest(ComparisonOperatorNodeTest):
+class ComparisonOperatorNodeEqualToTest(ComparisonOperatorNodeTest):
 
 	def setUp(self):
 		super().setUp()

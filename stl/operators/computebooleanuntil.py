@@ -10,61 +10,60 @@ def computeBooleanUntil(lhs: BooleanSignal, rhs: BooleanSignal, interval: Interv
 	a = interval.getLower()
 	b = interval.getUpper()
 	# Get the true intervals of the signals
-	intervals_1, intervals_2 = [], []
-	temp_1, temp_2 = [], []
-	true_1, true_2 = False, False
+	lhsIntervals, rhsIntervals = [], []
+	currentLhsInterval, currentRhsInterval = [], []
+	previousLhsTrue, previousRhsTrue = False, False
 	assert lhs.getCheckpointCount() == rhs.getCheckpointCount()
 	size = lhs.getCheckpointCount()
 	for i in range(size):
-		if lhs.getValue(i) and not true_1:
-			true_1 = True
-			temp_1.append(lhs.getTime(i))
-		elif not lhs.getValue(i) and true_1:
-			true_1 = False
+		if lhs.getValue(i) and not previousLhsTrue:
+			previousLhsTrue = True
+			currentLhsInterval.append(lhs.getTime(i))
+		elif not lhs.getValue(i) and previousLhsTrue:
+			previousLhsTrue = False
 			# temp_1.append(result[0][0][i - 1])  # Closed interval (discrete time steps)
-			temp_1.append(lhs.getTime(i))  # Half open interval [a,b) (continuous time steps)
-			intervals_1.append(temp_1)
-			temp_1 = []
+			currentLhsInterval.append(lhs.getTime(i))  # Half open interval [a,b) (continuous time steps)
+			lhsIntervals.append(currentLhsInterval)
+			currentLhsInterval = []
 
-		if rhs.getValue(i) and not true_2:
-			true_2 = True
-			temp_2.append(rhs.getTime(i))
-		elif not rhs.getValue(i) and true_2:
-			true_2 = False
+		if rhs.getValue(i) and not previousRhsTrue:
+			previousRhsTrue = True
+			currentRhsInterval.append(rhs.getTime(i))
+		elif not rhs.getValue(i) and previousRhsTrue:
+			previousRhsTrue = False
 			# temp_2.append(result[1][0][i - 1])  # Closed interval (discrete time steps)
-			temp_2.append(rhs.getTime(i))  # Half open interval [a,b) (continuous time steps)
-			intervals_2.append(temp_2)
-			temp_2 = []
-	if true_1:
-		temp_1.append(lhs.getTime(size - 1))
-		intervals_1.append(temp_1)
-	if true_2:
-		temp_2.append(rhs.getTime(size - 1))
-		intervals_2.append(temp_2)
+			currentRhsInterval.append(rhs.getTime(i))  # Half open interval [a,b) (continuous time steps)
+			rhsIntervals.append(currentRhsInterval)
+			currentRhsInterval = []
+	if previousLhsTrue:
+		currentLhsInterval.append(lhs.getTime(size - 1))
+		lhsIntervals.append(currentLhsInterval)
+	if previousRhsTrue:
+		currentRhsInterval.append(rhs.getTime(size - 1))
+		rhsIntervals.append(currentRhsInterval)
 
 	# Decompose and calculate the Until for the decompositions
-	intervals_until = []
-	for inter_1 in intervals_1:
-		for inter_2 in intervals_2:
-			intersection = getTimeListIntersection(inter_1, inter_2)
+	resultIntervals = []
+	for currentLhsInterval in lhsIntervals:
+		for currentRhsInterval in rhsIntervals:
+			intersection = getTimeListIntersection(currentLhsInterval, currentRhsInterval)
 			if intersection:
 				interval = [max(0, intersection[0] - b), min(size, intersection[1] - a)]
-				if interval[0] > interval[1]:  # Interval doesn't exist
-					continue
-				intersection = getTimeListIntersection(interval, inter_1)
+				assert interval[0] <= interval[1], "Non-existent interval, not sure how to handle this."
+				intersection = getTimeListIntersection(interval, currentLhsInterval)
 				if intersection:
-					intervals_until.append(intersection)
+					resultIntervals.append(intersection)
 	# Calculate the entire until, make the intervals true in the until
 	until = BooleanSignal("booleanTimedUntil", rhs.getTimes(), [0] * size)
-	for untilInterval in intervals_until:
+	for untilInterval in resultIntervals:
 		for timestamp in untilInterval:
 			if timestamp in until.getTimes():
-				timestampIndex = until.getTimes().index(timestamp)
-				until.getCheckpoint(timestampIndex).setValue(1)
+				timestampIndex = until.computeIndexForTime(timestamp)
+				until.setValue(timestampIndex, 1)
 			else:
 				until.emplaceCheckpoint(timestamp, 1)
-		intervalStartIndex = until.getTimes().index(untilInterval[0])
-		intervalEndIndex = until.getTimes().index(untilInterval[1])
+		intervalStartIndex = until.computeIndexForTime(untilInterval[0])
+		intervalEndIndex = until.computeIndexForTime(untilInterval[1])
 		for i in range(intervalStartIndex, intervalEndIndex):
 			# Iteration (by index) over all time stamps in until part of the interval
 			# Half-open interval, so exclude the last value.
@@ -73,10 +72,8 @@ def computeBooleanUntil(lhs: BooleanSignal, rhs: BooleanSignal, interval: Interv
 	for i in reversed(range(until.getCheckpointCount())):
 		if until.getTime(i) > lhs.getTime(-1) - b:
 			if until.getTime(i - 1) < lhs.getTime(-1) - b:
-				assert until.getTimes() == sorted(until.getTimes()), "Time was unsorted prior to time modification."
 				poppedPoint: SignalValue = until.popCheckpoint()
-				until.emplaceCheckpoint(lhs.getTime(-1) - b, poppedPoint.getValue(), poppedPoint.getDerivative())
-				assert until.getTimes() == sorted(until.getTimes()), "Time modification created an issue."
+				until.emplaceCheckpoint(lhs.getTime(-1) - b, poppedPoint.getValue())
 			else:
 				until.popCheckpoint()
 	return until
