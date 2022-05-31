@@ -15,11 +15,10 @@ def __addLargerThanPreviousAndDescendingResult(
     previousResult: float,  # type: ignore
     output: Signal
 ) -> None:
-	cp = signal.getCheckpoint(timeIndex)
-	output.addCheckpoint(cp)
-
-
+	output.addCheckpoint(signal.getCheckpoint(timeIndex))
 # pylint: enable=unused-argument
+
+
 def __addSmallerThanPreviousResult(signal: Signal, timeIndex: int, previousResult: float, output: Signal) -> None:
 	output.emplaceCheckpoint(signal.getTime(timeIndex), previousResult, 0)
 
@@ -27,6 +26,7 @@ def __addSmallerThanPreviousResult(signal: Signal, timeIndex: int, previousResul
 def __addCrossesPreviousAndDescendingResult(
     signal: Signal, timeIndex: int, previousResult: float, output: Signal
 ) -> None:
+	output.addCheckpoint(signal.getCheckpoint(timeIndex))
 	constPreviousStart: Point = Point(signal.getTime(timeIndex), previousResult)
 	constPreviousEnd: Point = Point(signal.getTime(timeIndex + 1), previousResult)
 	constPreviousSegment: LineSegment = LineSegment(constPreviousStart, constPreviousEnd)
@@ -36,7 +36,6 @@ def __addCrossesPreviousAndDescendingResult(
 	intersect = LineSegment.computeIntersectionPoint(constPreviousSegment, signalSegment)
 	intersect.normalize()
 	output.emplaceCheckpoint(intersect.x, intersect.y, 0)
-	output.addCheckpoint(signal.getCheckpoint(timeIndex))
 
 
 def computeUntimedEventually(signal: Signal) -> Signal:

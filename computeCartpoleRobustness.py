@@ -64,8 +64,6 @@ def computeRobustness():
 		robustnesses = []
 		index = 0
 		for cartSignal, poleSignal in zip(cartSignals[1100:1200], poleSignals[1100:1200]):
-			if any([abs(x) > 2.4 for x in cartSignal.getValues()]):
-				breakpoint = True
 			r = stlTree.validate(SignalList([cartSignal, poleSignal]))
 			robustnesses.append(r)
 			if index % 25 == 0:

@@ -3,7 +3,7 @@ import pickle
 import dill
 import torch
 import os
-from typing import Tuple
+from typing import Tuple, List
 from stl.signals import Signal
 from stl.utility import Interval
 import matplotlib.pyplot as plt
@@ -54,29 +54,46 @@ def computeSampleSize(dataset, windowSize):
 		count += signal.computeIndexForTime(lastTime) + 1
 	return count
 
+def MyNllLoss(dist: torch.distributions.Normal, target: float):
+	return -dist.log_prob(target).sum()
+
 
 class CartpoleRobustnessEstimator(torch.nn.Module):
 	""" Estimator for the cart pole robustness. Requires that input length is >= 5. """
 
 	def __init__(self):
 		super().__init__()
+<<<<<<< HEAD
 		self.activation = torch.nn.LeakyReLU()
 		self.lossFunction = torch.nn.L1Loss()
+=======
+		self.activation = torch.nn.Sigmoid()
+		self.lossFunction = MyNllLoss
+>>>>>>> 80fd398 (Windows changes for document work)
 		self.model = torch.nn.Sequential(
 		    torch.nn.AdaptiveAvgPool1d(35),  #
 		    torch.nn.Conv1d(2, 2, 10),  #
 		    self.activation,  #
-		    torch.nn.Flatten(),  # 
+<<<<<<< HEAD
+		    torch.nn.Flatten(),  #
 		    torch.nn.Linear(52, 32),  #
+=======
+		    torch.nn.Flatten(),  #
+		    torch.nn.Linear(52, 128),  #
+>>>>>>> 80fd398 (Windows changes for document work)
 		    self.activation,  #
 		    torch.nn.Linear(32, 16),  #
 		    self.activation,  #
-		    torch.nn.Linear(16, 1)
+		    torch.nn.Linear(16, 2)
 		).cuda()
 		self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
 
 	def forward(self, x):
-		return self.model(x)
+		out = self.model(x)
+		mean = out[..., 0][..., None]
+		std = torch.clamp(out[..., 1][..., None], min=0.01)
+		dist = torch.distributions.Normal(mean, std)
+		return dist
 
 	def train(self, dataSet):
 		"""
@@ -88,7 +105,7 @@ class CartpoleRobustnessEstimator(torch.nn.Module):
 		for entry in dataSet:
 			prediction = self.forward(entry[0])
 			self.optimizer.zero_grad()
-			loss = self.lossFunction(prediction.squeeze(), entry[1].squeeze())
+			loss = self.lossFunction(prediction, entry[1].squeeze())
 			losses.append(loss.item())
 			loss.backward()
 			self.optimizer.step()
@@ -100,27 +117,32 @@ class CartpoleRobustnessEstimator(torch.nn.Module):
 		print(f"Handled all samples: {dataIndex-1} out of {len(dataSet)}")
 
 	def test(self, dataSet):
-		""" 
+		"""
 		Tests the model. Prints performance stats.
 		"""
-		outputs = []
+		outputs: List[torch.distributions.Normal, float] = []
 		dataIndex = 0
 		for entry in dataSet:
 			prediction = self.forward(entry[0])
-			outputs.append((prediction.item(), entry[1].item()))
+			outputs.append((prediction, entry[1].item()))
 			dataIndex += 1
 			if dataIndex % 5000 == 0:
 				print(f"Handled {dataIndex} out of {len(dataSet)} samples")
 		print(f"Handled all samples: {dataIndex-1} out of {len(dataSet)}")
-		mean = 0
-		for x, y in outputs:
-			mean += (x - y)**2
-		mean /= len(outputs)
-		plt.plot([x[0] for x in outputs], label="estimated", color='blue')
-		plt.plot([x[1] for x in outputs], label="expected", color='red')
+
+		#plt.plot([x[0] for x in outputs], label="estimated", color='blue')
+		times = list(range(len(outputs)))
+		print(type(times))
+		print(times)
+		plt.plot(times, [x[1] for x in outputs], label="expected", color='red')
+		y1 = [(x[0].mean + x[0].stddev).item() for x in outputs]
+		y2 = [(x[0].mean - x[0].stddev).item() for x in outputs]
+		print(times)
+		print(y1)
+		print(y2)
+		plt.fill_between(times, y1, y2, color='blue', alpha=0.5, label="estimated")
 		plt.legend()
 		plt.show()
-		print(f"Estimator was off by {mean} on average.")
 
 
 def preprocess(dataset, windowSize):
@@ -151,15 +173,23 @@ def preprocess(dataset, windowSize):
 
 # trainData = data[:-10]
 # testData = data[-10:]
-# trainData = [x for x in preprocess(trainData, 50)]
-# testData = [x for x in preprocess(testData, 50)]
+
+# print("Start train convert")
+# trainData = list(preprocess(trainData, 50))
+# print("Start test convert")
+# testData = list(preprocess(testData, 50))
 # with open("traindata.pickle", "wb") as f:
-# 	dill.dump(trainData, f, pickle.HIGHEST_PROTOCOL)
+# 	print("Start train write")
+# 	torch.save(trainData, f, pickle_module=dill, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 # with open("testdata.pickle", "wb") as f:
-# 	dill.dump(testData, f, pickle.HIGHEST_PROTOCOL)
+# 	print("Start test write")
+# 	torch.save(testData, f, pickle_module=dill, pickle_protocol=pickle.HIGHEST_PROTOCOL)
+# print("Finished converting data!")
+# exit(1)
 
 saveFileName = "estimator.pickle"
 skipTraining = False
+
 if os.path.exists(saveFileName):
 	ans = input("Save file exists. Use it?\n")
 	if ans.lower() in ('yes', 'y'):
@@ -174,7 +204,7 @@ else:
 	estimatorPoolSize = 25
 	print("Loading the train data!")
 	with open("traindata.pickle", "rb") as f:
-		trainData = dill.load(f)
+		trainData = torch.load(f, pickle_module=dill, map_location='cuda:0')
 	print("Train data loaded...")
 
 	estimator = CartpoleRobustnessEstimator()
@@ -183,7 +213,7 @@ else:
 		torch.save(estimator, f, pickle_protocol=pickle.HIGHEST_PROTOCOL)
 print("Loading the test data!")
 with open("testdata.pickle", "rb") as f:
-	testData = dill.load(f)
+	testData = torch.load(f, pickle_module=dill, map_location='cuda:0')
 print("Test data loaded...")
 estimator.test(testData)
 

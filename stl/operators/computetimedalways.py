@@ -13,15 +13,5 @@ def computeTimedAlways(signal: Signal, interval: Interval) -> Signal:
 	eventuallyNotSignal: signalType = computeTimedEventually(notSignal, interval)
 	alwaysSignal: signalType = computeNot(eventuallyNotSignal)
 	alwaysSignal.setName("timedAlways")
-
-	# Compute the expected timestamp set, then remove all unexpected timestamps
-	offset = interval.getUpper() if interval.getUpper() != float('inf') else interval.getLower()
-	times = [
-	    round(x - offset, 5) for x in filter( # If x in interval [0, a[, don't include. 
-	        lambda x: x >= offset and x >= interval.getLower(),
-	        signal.getTimes(), # If x < 0 after subtraction, don't include.
-	    )
-	]
-	alwaysSignal.filterTimes(times)
 	alwaysSignal.recomputeDerivatives()
 	return alwaysSignal

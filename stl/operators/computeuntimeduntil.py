@@ -15,7 +15,7 @@ def computeUntimedUntil(lhsSignal: Signal, rhsSignal: Signal) -> Signal:
 	), "Operations can only be meaningfully performed for Signals of the same type."
 	signalType = type(lhsSignal)
 	# allTimes: List[float] = getSortedMergedListNoDuplicates(lhsSignal.getTimes(), rhsSignal.getTimes())
-	previousValue: Signal = signalType.createConstant('previous', -1)
+	previousValue: Signal = signalType.createConstant('previous', float('inf'))
 	output: Signal = signalType("untimedUntil")
 	lhsSignal, rhsSignal = Signal.computeComparableSignals(lhsSignal, rhsSignal)
 	if lhsSignal.isEmpty():  # rhsSignal will also be empty
@@ -26,6 +26,8 @@ def computeUntimedUntil(lhsSignal: Signal, rhsSignal: Signal) -> Signal:
 		currentInterval: Interval = Interval(lhsSignal.getTime(currentIndex), lhsSignal.getTime(currentIndex + 1))
 		currentLhsInterval: Signal = lhsSignal.computeInterval(currentInterval)
 		currentRhsInterval: Signal = rhsSignal.computeInterval(currentInterval)
+		# Signals should be comparable (i.e. same timestamps), so interval should be exactly the 2 limit values for both signals
+		assert (currentLhsInterval.getCheckpointCount() == currentRhsInterval.getCheckpointCount() == 2)
 		# https://link.springer.com/chapter/10.1007/978-3-642-39799-8_19
 		# Implementation of Algorithm 2
 		# slight corrections to match the section where they describe the math (Section 4, subsection 'Operatur U.', page 8)

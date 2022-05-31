@@ -41,7 +41,7 @@ class SignalValue:
 	def setTime(self, v: float) -> None:
 		"""
 		Sets the timestamp for the SignalValue instance.
-		This method must not be used when the checkpoint has been inserted in a container that sorts by the timestamp.
+		This method must not be used when the checkpoint has been inserted in a container that sorts by timestamp.
 		"""
 		self.timestamp = float(v)
 
@@ -63,11 +63,9 @@ class SignalValue:
 		if type(other) is not type(self):
 			super().__eq__(other)
 		return (self.timestamp == other.timestamp and self.value == other.value and self.derivative == other.derivative)
-		# return (
-		#     math.isclose(self.timestamp, other.timestamp, rel_tol=1e-7)
-		#     and math.isclose(self.value, other.value, rel_tol=1e-7)
-		#     and math.isclose(self.derivative, other.derivative, rel_tol=1e-7)
-		# )
+
+	def __hash__(self):
+		return hash(self.__str__())
 
 	def oldFormat(self) -> List[List[float]]:
 		""" Conver the SV to the old format; [[times], [values], [derivatives]] """

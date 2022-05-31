@@ -157,8 +157,6 @@ class Signal:
 				rhsResult.emplaceCheckpoint(point.x, point.y, 0)
 		lhsResult.recomputeDerivatives()
 		rhsResult.recomputeDerivatives()
-		assert lhsResult.getTimes() == rhsResult.getTimes(
-		), "The punctual intersection function must return two Signals with exactly equal time checkpoints."
 		return [lhsResult, rhsResult]
 
 	def computeInterpolatedCheckpoint(self, t: float) -> SignalValue:
@@ -179,11 +177,9 @@ class Signal:
 		# If it's somewhere between two data points, interpolate
 		value = self.getValue(i - 1)
 		derivative = self.getDerivative(i - 1)
-		# fraction of the way the interpolated point is between the point at i-1(0) and i(1)
+		# fraction of the way the interpolated point is between the point at i-1 and i
 		fraction = (t - self.getTime(i - 1)) / (self.getTime(i) - self.getTime(i - 1))
 		value += derivative * fraction
-		# value += (self.getValue(i) - self.getValue(i - 1)
-		#           ) / ((self.getTime(i) - self.getTime(i - 1)) * t - self.getTime(i - 1))
 		return value
 
 	# Get a derivative of the signal at time step t
@@ -273,9 +269,9 @@ class Signal:
 	def oldFormat(self) -> List[List[float]]:
 		"""Grab representation of this signal in the format used in old version of the code.
 		May be useful to compare outputs between the versions."""
-		# Might be useful sometime.
 		# pylint: disable=protected-access
 		return [self.getTimes()._lists[0], self.getValues(), self.getDerivatives()]
+		# pylint: enable=protected-access
 
 	def computeLines(self) -> List[LineSegment]:
 		""" Convert the Signal into a set of LineSegments; used to compute intersections. """
@@ -292,10 +288,6 @@ class Signal:
 
 	def getTimes(self) -> List[float]:
 		""" Get the times for the signal. """
-		# if not all([x == y for x, y in zip(self.times, [x.getTime() for x in self.checkpoints])]):
-		# 	print(self.times)
-		# 	print([x.getTime() for x in self.checkpoints])
-		# 	raise AssertionError("These two should be equal!")
 		return self.times
 
 	def getDerivatives(self) -> List[float]:
@@ -335,45 +327,38 @@ class Signal:
 
 	def getTime(self, index: int) -> float:
 		"""Return the timestamp of the signal checkpoint at the specified index"""
-		# assert all([x == y for x, y in zip(self.times, [c.getTime() for c in self.checkpoints])])
-		#assert len(self.times) == len(self.checkpoints)
-		#assert all(x == y for x, y in zip(self.times, [c.getTime() for c in self.checkpoints]))
-
 		# pylint: disable=protected-access
-		# listIndex, itemIndex = divmod(index, self.times._load)
-		# assert self.times._lists[listIndex][itemIndex] == self.times[index]
-		#assert self.times._lists[0][index] == self.times[
-		#   index], f"{self.times._lists[0][index]} != {self.times[index]} for i = {index}"
 		return self.times._lists[0][index]
 		# pylint: enable=protected-access
 
 	def getValue(self, index: int) -> float:
 		"""Return the value of the signal checkpoint at the specified index"""
-		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
 		# pylint: disable=protected-access
 		return self.checkpoints._lists[0][index].getValue()
+		# pylint: enable=protected-access
 
 	def getDerivative(self, index: int) -> float:
 		"""Return the derivative of the signal checkpoint at the specified index"""
-		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
 		# pylint: disable=protected-access
 		return self.checkpoints._lists[0][index].getDerivative()
 
 	def getCheckpoint(self, index: int) -> SignalValue:
 		"""Return the signal checkpoint at the specified index"""
-		#assert abs(index) < len(self.checkpoints), f"{abs(index)} >= {len(self.checkpoints)}. Access non-existent index."
 		# pylint: disable=protected-access
 		return self.checkpoints._lists[0][index]
+		# pylint: enable=protected-access
 
 	def setValue(self, index: int, value: float) -> None:
 		""" Set the value for the checkpoint at index. """
 		# pylint: disable=protected-access
 		self.checkpoints._lists[0][index].setValue(value)
+		# pylint: enable=protected-access
 
 	def setDerivative(self, index: int, derivative: float) -> None:
 		""" Set the derivative for the checkpoint at index. """
 		# pylint: disable=protected-access
 		self.checkpoints._lists[0][index].setDerivative(derivative)
+		# pylint: enable=protected-access
 
 	def getDefinedTimeInterval(self) -> Interval:
 		""" Returns the Interval of time over which this Signal is defined
@@ -407,9 +392,6 @@ class Signal:
 			if not math.isclose(self.getValue(self.computeIndexForTime(time)), value, rel_tol=1e-4):
 				warnings.warn("Skipped insertion of a duplicate point with differing value.")
 			return
-		if time == 258.90337:
-			time = 258.90337
-
 		self.checkpoints.add(SignalValue(time, value, derivative if derivative is not None else 0))
 		self.times.add(time)
 
@@ -433,27 +415,6 @@ class Signal:
 		for cp in self.checkpoints:
 			newCheckpoints.append(SignalValue(cp.getTime() + offset, cp.getValue(), cp.getDerivative()))
 		return self.fromCheckpoints(f"{self.name}_shift", newCheckpoints)
-
-	def merge(self, other: 'Signal') -> None:
-		""" Takes all checkpoints from other and merges them into self.\n
-		Requires that the timestamps are not equal for all checkpoints where the checkpoints are not identical. """
-		assert all(
-		    cp.getTime() not in self.getTimes() or self.getCheckpoint(self.computeIndexForTime(cp.getTime())) == cp
-		    for cp in other.getTimes()
-		)
-		for cp in other.getCheckpoints():
-			self.addCheckpoint(cp)
-
-	# def simplify(self):
-	# 	""" Remove unnecessary checkpoints from the checkpoints list.\n
-	# 	These are checkpoints that convey no additional information;
-	# 	if three sequential checkpoints have the same value, the middle one conveys no useful information. """
-	# 	i = 0
-	# 	while i < self.getCheckpointCount() - 2:
-	# 		if self.getValue(i) == self.getValue(i + 1) == self.getValue(i + 2):
-	# 			self.removeCheckpoint(i + 1)
-	# 			continue
-	# 		i += 1
 
 	def recomputeDerivatives(self):
 		"""Re-compute the derivatives part of each SignalValue, to make sure it matches the current values."""
@@ -494,8 +455,8 @@ class Signal:
 
 	def filterTimes(self, times: List[float]) -> 'Signal':
 		""" Filters the times in the current signal (no copy), so that all checkpoints
-		that do not have cp.t in times are removed from the Signal. 
-		
+		that do not have cp.t in times are removed from the Signal.
+
 		Used to filter the output from functions to the expected output times. """
 		index = 0
 		while index < self.getCheckpointCount():

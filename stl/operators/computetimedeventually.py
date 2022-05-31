@@ -10,7 +10,7 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	Timed Eventually is the supremum of the signal over the interval.
 
 	Modified version of the min-max streaming filter algorithm described by Daniel Lemire in
-	STREAMING MAXIMUM-MINIMUM FILTER USING NO MORE THAN THREE COMPARISONS PER ELEMENT
+	Streaming Maximum-Minimum Filter Using No More than Three Comparisons per Element
 	https://arxiv.org/abs/cs/0610046
 
 	Modifications:  - Use time values rather than indices
@@ -21,7 +21,7 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	signalType = type(inSignal)
 	# Initialize the output signal
 	out: Signal = signalType('timedEventually')
-	if inSignal.isEmpty():
+	if inSignal.isEmpty() or interval.getLower() > interval.getUpper():
 		return out
 	# Drop the prefix we ignore (lower bound of the interval) and shift the signal back to the same start time.
 	signal = inSignal.computeInterval(Interval(interval.getLower() + inSignal.getTime(0), float('inf')))
@@ -30,12 +30,14 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	windowWidth: float = interval.getUpper() - interval.getLower()
 	# Set of potential maxima
 	maximumCandidates: List[SignalValue] = []
-	# In case of Singular signal, return either a) the signal itself, in case of singular interval
-	#                                           b) an empty signal, in case of non-singular interval
-	if signal.isSingular():
-		if windowWidth == 0:
-			out.addCheckpoint(signal.getCheckpoint(0))
+	# In case of interval size 0, this operation is the identity function
+	if windowWidth == 0:
+		out: Signal = Signal.fromCheckpoints("timedEventually", signal.getCheckpoints())
 		return out
+	# In case of Singular signal (and non-zero sized interval), return an empty signal
+	if signal.isSingular():
+		return out
+
 	# Algorithm doesn't include the first timestep if windowWidth < first segment size.
 	# this bit adds that first element when necessary
 	if windowWidth < signal.getTime(1) - signal.getTime(0):
@@ -48,19 +50,19 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	for segmentIndex in range(signal.getCheckpointCount() - 1):
 		segment: Tuple[SignalValue, SignalValue] = signal.getCheckpoint(segmentIndex), signal.getCheckpoint(segmentIndex + 1)
 		currentWindowLowerBound: float = segment[1].getTime() - windowWidth
-		currentWindowUpperBound: float = segment[1].getTime()
+		if segment[0].getTime() < currentWindowLowerBound:
+			segment[0] = signal.computeInterpolatedCheckpoint(currentWindowLowerBound)
+		# currentWindowUpperBound: float = segment[1].getTime()
 		# Filter the set of candidates -- if timestamp is lower than what we're currently working on, it's not useful
 		while maximumCandidates and maximumCandidates[0].getTime() < currentWindowLowerBound:
 			maximumCandidates.pop(0)
-		if segment[0].getValue() >= segment[1].getValue() or segment[1].getTime() > currentWindowUpperBound:
-			# Candidate is lower bound if lowerboundvalue >= upperboundvalue or if upperbound falls outside of current window.
-			# Check to see if last element of candidates == current to add;
-			# If it is, we've added it already and this would be silly.
-			if not maximumCandidates or maximumCandidates[-1] != segment[0]:
-				maximumCandidates.append(segment[0])
+		# Pick which side of the window is the bigger one currently
+		if segment[0].getValue() >= segment[1].getValue():
+			candidate = segment[0]
 		else:
-			# Other cases, the upper bound is the candidate (upper in window, upper > lower)
-			maximumCandidates.append(segment[1])
+			candidate = segment[1]
+		if not maximumCandidates or maximumCandidates[-1] != candidate:
+			maximumCandidates.append(candidate)
 		# Filter maximum candidates, remove values at second to last position until it's a sorted (descending) list again.
 		# This occurs, at the latest, when there is one element remaining. A one-element list is always sorted.
 		while len(maximumCandidates) >= 2 and maximumCandidates[-2].getValue() < maximumCandidates[-1].getValue():
@@ -74,9 +76,9 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	# Compute the expected timestamp set, then remove all unexpected timestamps
 	offset = interval.getUpper() if interval.getUpper() != float('inf') else interval.getLower()
 	times = [
-	    round(x - offset, 5) for x in filter( # If x in interval [0, a[, don't include. 
-	        lambda x: x >= offset and x >= interval.getLower(),  
-	        inSignal.getTimes(), # If x < 0 after subtraction, don't include. 
+	    round(x - offset, 5) for x in filter( # If x in interval [0, a[, don't include.
+	        lambda x: x >= offset and x >= interval.getLower(),
+	        inSignal.getTimes(), # If x < 0 after subtraction, don't include.
 	    )
 	]
 	out.filterTimes(times)
