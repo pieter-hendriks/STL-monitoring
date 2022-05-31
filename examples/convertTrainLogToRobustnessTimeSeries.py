@@ -105,7 +105,7 @@ def __conversionHelper(
 			stlTree.toDot(f)
 
 		if index % 10 == 0:
-			print(f"Handled index={index} robustness computation!")
+			print(f"Handled episode index={index} robustness computation!")
 
 	with open(outputPath, 'w') as f:
 		f.write("import os\nimport sys\nsys.path.insert(0, f'{os.getcwd()}/stlTool')\nfrom stl.signals import Signal\n")
