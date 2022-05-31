@@ -7,7 +7,7 @@ from .computeuntimedeventually import computeUntimedEventually
 def computeUntimedAlways(signal: Signal) -> Signal:
 	""" Computes the untimed always (globally) STL operation. Creates a new Signal instance to hold the result.  """
 
-	# Naive implementation (which probably performs worse)
+	# Alternative implementation:
 	# Keep a running minimum, initialize with last checkpoint in src signal
 	# Go through signal backwards, updating minimum as we go
 	# For each timestep in source signal, add updated minimum to new signal at said timestep
@@ -15,8 +15,7 @@ def computeUntimedAlways(signal: Signal) -> Signal:
 	#
 	# Which is O(len(signal))
 
-	# For now, we keep this implementation because it mirrors the timed implementation;
-	# it is guaranteed to be error-free as long as the not and eventually operators are
+	# Current implementation: always(x) = not(eventually(not(x)))
 
 	signalType = type(signal)
 	notSignal: signalType = computeNot(signal)

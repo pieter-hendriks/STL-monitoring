@@ -1,17 +1,39 @@
 """ Set of functions to convert agent training log for various environments into a simple set of [input -> robustness] data """
 # pylint: disable-all
 # Adjust path to imports work as expected
+from ast import Not
 import os
 import sys
 
 sys.path.insert(0, f"{os.getcwd()}/stlTool")
 import stl
 import antlr4 as a4
-import numpy as np
+from typing import List, Callable, Tuple
+
+
+def normalizeCart(value: float) -> float:
+	return value / 2.4
+
+
+def normalizePole(value: float) -> float:
+	return value / 0.2095
+
+
+def normalizeCartpole(index: int, value: float) -> float:
+	if index == 0:
+		return normalizeCart(value)
+	if index == 2:
+		return normalizePole(value)
+	raise NotImplementedError("Unreachable")
+
+
+def normalizeMountaincar(index: int, value: float) -> float:
+	return value
+
 
 # TODO: Change path back to data_converted.py rather than data_converted_FAKE.py
 # Change made to allow some debugging
-def convertCartpole():
+def convertCartpole() -> None:
 	""" Handle conversion from training log to robustness time series for the Cartpole environment """
 	signals = {0: 'c', 2: 'p'}
 	outFile = 'stlTool/examples/cartpole/data_converted_FAKE.py'
@@ -22,12 +44,14 @@ def convertCartpole():
 		return None
 	# Expensive import, so do it only when required
 	from examples.cartpole.data import trainingData as cartpoleTrainingData
-	formula = "(([]{0,50}(2.4-c))^([]{0,50}(2.4+c)))^(([]{0,50}(0.209-p))^([]{0,50}(0.209+p)))"
+	# Use a formula with normalized data, so we have equal impacts from the two signals.
+	formula = "(([]{0,50}(0.5-c))^([]{0,50}(0.5+c)))^(([]{0,50}(0.5-p))^([]{0,50}(0.5+p)))"
 	minimumLength = 50  # Size of the largest window - no meaningful computation if this isn't reached
-	__conversionHelper(formula, signals, minimumLength, cartpoleTrainingData, outFile)
+
+	__conversionHelper(formula, signals, minimumLength, cartpoleTrainingData, outFile, normalizeCartpole)
 
 
-def convertMountaincar():
+def convertMountaincar() -> None:
 	""" Handle conversion from training log to robustness time series for the mountaincar environment """
 	outFile = 'stlTool/examples/mountaincar/data_converted.py'
 	if os.path.exists(outFile):
@@ -39,10 +63,12 @@ def convertMountaincar():
 	formula = "<>{0, 50}(p - 0.45)"
 	minimumLength = 50
 	signals = {0: 'p'}
-	__conversionHelper(formula, signals, minimumLength, mountaincarTrainingData, outFile)
+	__conversionHelper(formula, signals, minimumLength, mountaincarTrainingData, outFile, normalizeMountaincar)
 
 
-def __conversionHelper(stlFormula, signals, minLength, data, outputPath):
+def __conversionHelper(
+    stlFormula: str, signals: dict, minLength: int, data: List[Tuple], outputPath: str, normalizeFunction: Callable
+) -> None:
 	""" Helper function to handle conversion from training log to robustness timeseries
 	stlFormula is the (string form) formula we base the robustness computation on
 	Signals should be dictionary: {observationIndex: name}.
@@ -69,28 +95,23 @@ def __conversionHelper(stlFormula, signals, minLength, data, outputPath):
 			signalValues = []
 			for outputTuple in currentEpisodeData:
 				observation = outputTuple[0]
-				signalValues.append(observation[signalIndex])
+				value = normalizeFunction(signalIndex, observation[signalIndex])
+				signalValues.append(value)
 			signalTimestamps = list(range(len(signalValues)))
 			currentSignals.append(stl.signals.Signal(signalName, signalTimestamps, signalValues))
 		result = stlTree.validate(currentSignals)
 		results.append((currentSignals, result))
-		print(currentSignals[0])
-		print(currentSignals[1])
-		print(result)
-
 		with open("mytree.dot", "w") as f:
 			stlTree.toDot(f)
-
-		exit(1)
 
 		if index % 10 == 0:
 			print(f"Handled index={index} robustness computation!")
 
-	# with open(outputPath, 'w') as f:
-	# 	f.write("import os\nimport sys\nsys.path.insert(0, f'{os.getcwd()}/stlTool')\nfrom stl.signals import Signal\n")
-	# 	f.write("data = [\n\t")
-	# 	f.write(',\n\t'.join(x.__str__() for x in results))
-	# 	f.write("\n]")
+	with open(outputPath, 'w') as f:
+		f.write("import os\nimport sys\nsys.path.insert(0, f'{os.getcwd()}/stlTool')\nfrom stl.signals import Signal\n")
+		f.write("data = [\n\t")
+		f.write(',\n\t'.join(x.__str__() for x in results))
+		f.write("\n]")
 
 
 convertCartpole()

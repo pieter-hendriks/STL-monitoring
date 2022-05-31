@@ -12,7 +12,7 @@ class LineSegment:
 		self.B = b
 		assert self.A != self.B, "Coinciding points do not a line make"
 
-	def intersects(self, other: 'LineSegment') -> bool:
+	def intersects(self: 'LineSegment', other: 'LineSegment') -> bool:
 		""" Method to check if the line segment X intersects the line segment Y\n
 				The edge points are excluded; if the intersection is at either A1==A2 or B1==B2, False is returned."""
 		# ACD and BCD must have opposite orientation if the line segments intersect
@@ -25,11 +25,11 @@ class LineSegment:
 		                                      other.A) != Point.inCounterClockWiseOrder(self.A, self.B, other.B)
 		)
 
-	def computeSlope(self) -> float:
+	def computeSlope(self: 'LineSegment') -> float:
 		""" Compute the slope (derivative) of the line segment """
 		return (self.B.y - self.A.y) / (self.B.x - self.A.x)
 
-	def computeIntersectionPoint(self, other: 'LineSegment') -> Point:
+	def computeIntersectionPoint(self: 'LineSegment', other: 'LineSegment') -> Point:
 		""" Compute the point where self and other intersect """
 		assert self.intersects(other), "Cannot find an intersection point for two line segments that do not intersect."
 		m1, b1 = self.computeLineEquation()
@@ -39,7 +39,7 @@ class LineSegment:
 		x = round((b2-b1) / (m1-m2), 5)
 		return Point(x, m1*x + b1)
 
-	def computeLineEquation(self) -> Tuple[float, float]:
+	def computeLineEquation(self: 'LineSegment') -> Tuple[float, float]:
 		""" LineSegment is stored as defined between points A and B.
 		 This method computes the equation y = mx + b describing the line. """
 		slope = self.computeSlope()  # == m
@@ -47,7 +47,9 @@ class LineSegment:
 		return (slope, offset)
 
 	@classmethod
-	def computeIntersectionPoints(cls, lhsSegments: List['LineSegment'], rhsSegments: List['LineSegment']) -> List[Point]:
+	def computeIntersectionPoints(
+	    self: 'LineSegment.__class__', lhsSegments: List['LineSegment'], rhsSegments: List['LineSegment']
+	) -> List[Point]:
 		""" Computes the points (pair<time, value>) where self and other intersect.\n
 		Returns a list of the intersection points.
 		PRECONDITION: All X-coordinates between the lines must be identical.

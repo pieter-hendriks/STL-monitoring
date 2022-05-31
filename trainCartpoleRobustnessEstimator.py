@@ -2,7 +2,6 @@
 import pickle
 import dill
 import torch
-import numpy as np
 import os
 from typing import Tuple
 from stl.signals import Signal
@@ -61,16 +60,16 @@ class CartpoleRobustnessEstimator(torch.nn.Module):
 
 	def __init__(self):
 		super().__init__()
-		self.activation = torch.nn.Sigmoid()
-		self.lossFunction = torch.nn.HuberLoss()
+		self.activation = torch.nn.LeakyReLU()
+		self.lossFunction = torch.nn.L1Loss()
 		self.model = torch.nn.Sequential(
-		    torch.nn.AdaptiveMaxPool1d(50),  #
-		    torch.nn.Conv1d(2, 2, 25),  #
+		    torch.nn.AdaptiveAvgPool1d(35),  #
+		    torch.nn.Conv1d(2, 2, 10),  #
 		    self.activation,  #
 		    torch.nn.Flatten(),  # 
-		    torch.nn.Linear(52, 128),  #
+		    torch.nn.Linear(52, 32),  #
 		    self.activation,  #
-		    torch.nn.Linear(128, 16),  #
+		    torch.nn.Linear(32, 16),  #
 		    self.activation,  #
 		    torch.nn.Linear(16, 1)
 		).cuda()
@@ -133,8 +132,8 @@ def preprocess(dataset, windowSize):
 		pSignal = entry[0][0]
 		cSignal = entry[0][1]
 		labels = entry[1]
-		if pSignal.getTimes() != cSignal.getTimes():
-			pSignal, cSignal = Signal.computeCheckpointsForComparableSignal(pSignal, cSignal)
+		# if pSignal.getTimes() != cSignal.getTimes():
+		# 	pSignal, cSignal = Signal.computeCheckpointsForComparableSignal(pSignal, cSignal)
 		i = 0
 		# pSignal and cSignal now have matching timestamps
 		while pSignal.getTime(-1) >= pSignal.getTime(i) + windowSize:  # Also applies to cSignal
@@ -147,12 +146,13 @@ def preprocess(dataset, windowSize):
 			i += 1
 
 
+# print("Cartpole data import is enabled!")
 # from examples.cartpole.data_converted import data
 
 # trainData = data[:-10]
 # testData = data[-10:]
-# trainData = preprocess(trainData, 50)
-# testData = preprocess(testData, 50)
+# trainData = [x for x in preprocess(trainData, 50)]
+# testData = [x for x in preprocess(testData, 50)]
 # with open("traindata.pickle", "wb") as f:
 # 	dill.dump(trainData, f, pickle.HIGHEST_PROTOCOL)
 # with open("testdata.pickle", "wb") as f:
