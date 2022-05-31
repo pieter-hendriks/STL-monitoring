@@ -63,24 +63,14 @@ class CartpoleRobustnessEstimator(torch.nn.Module):
 
 	def __init__(self):
 		super().__init__()
-<<<<<<< HEAD
-		self.activation = torch.nn.LeakyReLU()
-		self.lossFunction = torch.nn.L1Loss()
-=======
 		self.activation = torch.nn.Sigmoid()
 		self.lossFunction = MyNllLoss
->>>>>>> 80fd398 (Windows changes for document work)
 		self.model = torch.nn.Sequential(
 		    torch.nn.AdaptiveAvgPool1d(35),  #
 		    torch.nn.Conv1d(2, 2, 10),  #
 		    self.activation,  #
-<<<<<<< HEAD
-		    torch.nn.Flatten(),  #
-		    torch.nn.Linear(52, 32),  #
-=======
 		    torch.nn.Flatten(),  #
 		    torch.nn.Linear(52, 128),  #
->>>>>>> 80fd398 (Windows changes for document work)
 		    self.activation,  #
 		    torch.nn.Linear(32, 16),  #
 		    self.activation,  #
