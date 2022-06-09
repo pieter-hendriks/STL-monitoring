@@ -26,5 +26,5 @@ class BinaryOperationTest(unittest.TestCase):
 		self.leftChild.booleanValidate.return_value = s1
 		self.rightChild.booleanValidate.return_value = s2
 		self.assertEqual(expectedResult, self.node.booleanValidate(None, None))
-		self.leftChild.booleanValidate.assert_called_once_with(None, None)
-		self.rightChild.booleanValidate.assert_called_once_with(None, None)
+		self.leftChild.booleanValidate.assert_called_once_with(None, None, True)
+		self.rightChild.booleanValidate.assert_called_once_with(None, None, True)

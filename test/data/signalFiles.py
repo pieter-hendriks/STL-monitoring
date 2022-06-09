@@ -1,6 +1,0 @@
-booleanValidatedSignal = "test/data/signals/ex_1a.csv"
-booleanInvalidatedSignal = "test/data/signals/ex_1b.csv"
-quantitativeValidatedSignal="test/data/signals/ex_sin1.csv"
-quantitativeInvalidatedSignal="test/data/signals/ex_sin2.csv"
-cartpoleBooleanSignal="test/data/signals/angles_ac_cart-pole.csv"
-cartpoleQuantitativeSignal="test/data/signals/angles_ac_cart-pole.csv"

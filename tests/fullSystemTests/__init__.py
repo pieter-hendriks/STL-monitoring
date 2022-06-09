@@ -1,0 +1,2 @@
+from .booleanSemanticsTest import BooleanCartpoleTest, BooleanSemanticsTest, BooleanCartpoleWrongFormulaTest
+from .quantitativeSemanticsTest import QuantitativeCartpoleTest, QuantitativeSemanticsTest, QuantitativeCartpoleWrongFormulaTest

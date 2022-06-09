@@ -1,0 +1,6 @@
+booleanValidatedSignal = "tests/data/signals/ex_1a.csv"
+booleanInvalidatedSignal = "tests/data/signals/ex_1b.csv"
+quantitativeValidatedSignal="tests/data/signals/ex_sin1.csv"
+quantitativeInvalidatedSignal="tests/data/signals/ex_sin2.csv"
+cartpoleBooleanSignal="tests/data/signals/angles_ac_cart-pole.csv"
+cartpoleQuantitativeSignal="tests/data/signals/angles_ac_cart-pole.csv"

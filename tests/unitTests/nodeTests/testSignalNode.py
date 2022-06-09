@@ -19,15 +19,15 @@ class SignalNodeTest(unittest.TestCase):
 				node.booleanValidate(SignalList(), None)
 		with self.assertRaisesRegex(RuntimeError, "Signal with name 'notfound' not found."):
 				node.quantitativeValidate(SignalList(), None)
-	
+
 	def testEmptySignal(self):
 		# Create node to test
 		node: SignalNode = SignalNode()
 		node.processToken("empty")
-		# Test both Boolean and Non-Boolean empty signals. 
+		# Test both Boolean and Non-Boolean empty signals.
 		for emptySignal in [BooleanSignal("empty"), Signal("empty")]:
 			# Boolean validation should return boolean empty signal no matter what input
-			self.assertEqual(BooleanSignal("empty"), node.booleanValidate(SignalList([emptySignal]), None))
+			self.assertEqual(BooleanSignal("empty"), node.booleanValidate(SignalList([emptySignal]), None, True))
 			# Quant validation should return quant empty signal no matter what input
 			self.assertEqual(Signal("empty"), node.quantitativeValidate(SignalList([emptySignal]), None))
 		self.assertNotEqual(BooleanSignal("empty"), Signal("empty"))
@@ -55,11 +55,13 @@ class SignalNodeTest(unittest.TestCase):
 		# The returned signal must be equal to the signal we created as input
 		self.assertEqual(cosSignal, node.quantitativeValidate(SignalList([cosSignal]), None))
 		# And booleanized version thereof in case of boolean evaluation
-		self.assertEqual(BooleanSignal.fromSignal(cosSignal), node.booleanValidate(SignalList([cosSignal]), None))
+		# booleanize must be explicitly set; BooleanSignal supports non-boolean values to allow for time intervals
+		# to be specified using Signals (for consistency, though this was a somewhat weird design decision we've made.)
+		self.assertEqual(BooleanSignal.fromSignal(cosSignal), node.booleanValidate(SignalList([cosSignal]), None, booleanize=True))
 
 
 
-		
+
 
 
 if __name__ == "__main__":

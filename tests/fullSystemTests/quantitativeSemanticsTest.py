@@ -24,16 +24,16 @@ class QuantitativeSemanticsTest(unittest.TestCase):
 	def testValidatedSignal(self):
 		signal = SignalList.fromCSV(signalFiles.quantitativeValidatedSignal)
 		result = self.stlTree.validate(signal, 'quantitative', plot=False)
-		self.assertEqual(expectedOutput.quantitativeValidatedSignal, result, f"Quantitative semantics result mismatch for input {signalFiles.quantitativeValidatedSignal} (validated signal)")
+		self.assertEqual(expectedOutput.quantitativeValidatedSignal, result.oldFormat(), f"Quantitative semantics result mismatch for input {signalFiles.quantitativeValidatedSignal} (validated signal)")
 
 	def testInvalidatedSignal(self):
 		signal = SignalList.fromCSV(signalFiles.quantitativeInvalidatedSignal)
 		result = self.stlTree.validate(signal, 'quantitative', plot=False)
-		self.assertEqual(expectedOutput.quantitativeInvalidatedSignal, result, f"Quantitative semantics result mismatch for input {signalFiles.quantitativeInvalidatedSignal} (invalidated signal)")
-	
+		self.assertEqual(expectedOutput.quantitativeInvalidatedSignal, result.oldFormat(), f"Quantitative semantics result mismatch for input {signalFiles.quantitativeInvalidatedSignal} (invalidated signal)")
+
 class QuantitativeCartpoleTest(unittest.TestCase):
 	def setUp(self):
-		self.formula = InputStream('[]{150,2950}(((12 - |e5|)) & ((|e5| - 4.5) -> <>{0,150}[]{0,30}(4.5 - |e5|)))')
+		self.formula = InputStream('[]{0,2770}(((12 - |e5|)) & ((|e5| - 4.5) -> <>{0,150}[]{0,30}(4.5 - |e5|)))')
 		lexer = stlLexer(self.formula)
 		stream = CommonTokenStream(lexer)
 		parser = stlParser(stream)
@@ -47,7 +47,25 @@ class QuantitativeCartpoleTest(unittest.TestCase):
 	def testValidatedSignal(self):
 		signal = SignalList.fromCSV(signalFiles.cartpoleQuantitativeSignal)
 		result = self.stlTree.validate(signal, 'quantitative', plot=False)
-		self.assertEqual(expectedOutput.quantitativeCartpoleSignal, result, "Quantitative cartpole result mismatch.")
+		self.assertEqual(expectedOutput.quantitativeCartpoleSignal, result.oldFormat(), "Quantitative cartpole result mismatch.")
+
+class QuantitativeCartpoleWrongFormulaTest(unittest.TestCase):
+	def setUp(self):
+		self.formula = InputStream('[]{150,2950}(((12 - |e5|)) & ((|e5| - 4.5) -> <>{0,150}[]{0,30}(4.5 - |e5|)))')
+		lexer = stlLexer(self.formula)
+		stream = CommonTokenStream(lexer)
+		parser = stlParser(stream)
+		tree = parser.content()
+		listener = CustomStlListener()
+		walker = ParseTreeWalker()
+		walker.walk(listener, tree)
+		parser.addParseListener(listener)
+		self.stlTree = listener.stlTree
+
+	def testWrongFormulaResult(self):
+		signal = SignalList.fromCSV(signalFiles.cartpoleQuantitativeSignal)
+		result = self.stlTree.validate(signal, 'quantitative', plot=False)
+		self.assertEqual([[], [], []], result.oldFormat(), "Quantitative cartpole result mismatch.")
 
 if __name__=='__main__':
 	unittest.main()
