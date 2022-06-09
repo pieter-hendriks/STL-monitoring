@@ -42,8 +42,11 @@ def main(argv):
 		argv.append('quantitative')
 
 	# Validate the signals with the STL formula
-	result = stlTree.validate(signals2, semantic=argv[3].lower(), plot=True)
-	print(result)
+	result = stlTree.validate(signals2, semantic=argv[3].lower(), plot=False)
+	#print(result)
+	#print(result.oldFormat())
+	#print(result.getCheckpointCount())
+
 
 	# import numpy as np
 	# numpy_array = np.array(result[:2])
@@ -56,5 +59,5 @@ def main(argv):
 
 
 if __name__ == '__main__':
-	#main(sys.argv)
-	main(['', 'formula.stl', 'signals/ex_1c.csv', 'quantitative'])
+	main(sys.argv)
+	#main(['', 'formula.stl', 'signals/ex_1c.csv', 'quantitative'])
