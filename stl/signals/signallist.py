@@ -18,7 +18,7 @@ class SignalList(List[Signal]):
 		raise RuntimeError(f"Signal with name '{name}' not found.")
 
 	@classmethod
-	def fromCSV(cls, csv: str) -> 'SignalList':
+	def fromCSV(cls, csv: str, forceBooleanSemantics=False, forceQuantitativeSemantics=False) -> 'SignalList':
 		"""Read Signals from CSV, return a SignalList instance
 		Column names in CSV should be 's', 's_t' and 's_d' for signal s (s must not contain '_')"""
 		data = pd.read_csv(csv)
@@ -32,16 +32,25 @@ class SignalList(List[Signal]):
 		_verifyColumns(signals, timestamps, derivatives, colTitles)
 		# If we only have Boolean values, use the booleansignal.BooleanSignal class to initialize
 		signalDataType = BooleanSignal if _isAllBooleanSignals(signals) else Signal
+		signalDataType = BooleanSignal if  forceBooleanSemantics else signalDataType
+		signalDataType = Signal if forceQuantitativeSemantics else signalDataType
+		assert not (forceBooleanSemantics and forceQuantitativeSemantics), "Can't force both semantic types!"
 		ret = []
 		for s in signals:
 			# Pattern as expected (and verified), read from dataframe into list of Signals
 			timestamp = s + '_t'
 			derivative = s + '_d'
 			# Add Signal to the list
-			if len(derivatives) != 0:
-				ret.append(signalDataType(s, list(data.loc[:, timestamp]), list(data.loc[:, s]), list(data.loc[:, derivative])))
+			if derivatives:
+				if timestamps:
+					ret.append(signalDataType(s, list(data.loc[:, timestamp]), list(data.loc[:, s]), list(data.loc[:, derivative])))
+				else:
+					ret.append(signalDataType(s, values=list(data.loc[:, s])))
 			else:
-				ret.append(signalDataType(s, list(data.loc[:, timestamp]), list(data.loc[:, s])))
+				if timestamps:
+					ret.append(signalDataType(s, list(data.loc[:, timestamp]), list(data.loc[:, s])))
+				else:
+					ret.append(signalDataType(s, values=list(data.loc[:, s])))
 		return SignalList(ret)
 
 
@@ -93,14 +102,16 @@ def _verifyColumns(signals: List[str], timestamps: List[str], derivatives: List[
 	    colTitles
 	), "Extracted column count does not match csv column count."
 	# Verify we have the same amount of data points for each.
-	assert len(timestamps) == len(signals), "Signal value and timestamp lists must have the same length."
-	# Ensure all timestamps are found in the signals
-	assert all(
-	    timestamp[:-2] in signals for timestamp in timestamps
-	), "Timestamp names, without '_t' must all be found in signal names."
-	assert all(
-	    signal + '_t' in timestamps for signal in signals
-	), "Signal names, with '_t' suffix must all be found in timestamp names."
+	# assert len(timestamps) == len(signals), "Signal value and timestamp lists must have the same length."
+	if timestamps:
+		assert len(timestamps) == len(signals), "Signal value and timestamp lists must have the same length (or timestamps must be empty)"
+		# Ensure all timestamps are found in the signals
+		assert all(
+				timestamp[:-2] in signals for timestamp in timestamps
+		), "Timestamp names, without '_t' must all be found in signal names."
+		assert all(
+				signal + '_t' in timestamps for signal in signals
+		), "Signal names, with '_t' suffix must all be found in timestamp names, if any are present"
 	# Ensure all derivatives
 	if len(derivatives) != 0:
 		assert all(
@@ -109,4 +120,4 @@ def _verifyColumns(signals: List[str], timestamps: List[str], derivatives: List[
 		assert all(
 		    signal + '_d' in derivatives for signal in signals
 		), "Signal names, with '_d' suffix must all be found in derivative names."
-		assert len(derivatives) == len(signals), "If any derivatives are present, all derivatives must be present."
+		assert len(derivatives) in [0, len(signals)], "If any derivatives are present, all derivatives must be present."

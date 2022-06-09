@@ -13,12 +13,10 @@ class SignalNode(Node):
 	def processToken(self, token: str) -> None:
 		self.signalName = str(token)
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
 		signal = signals.getByName(self.signalName)
-		if not isinstance(type, BooleanSignal):
-			# Should be only other option
-			assert isinstance(signal, Signal)
-			signal = BooleanSignal.fromSignal(signal)
+		if booleanize:
+			return BooleanSignal.fromSignal(signal)
 		return signal
 
 	def quantitativeValidate(self, signals: SignalList, plot: bool) -> Signal:

@@ -1,6 +1,7 @@
 """ Implementation of node representing ABS operation in STL formula """
 import math
 from typing import List
+from xmlrpc.client import boolean
 
 from ..node import Node
 from ....signals import SignalList, BooleanSignal, Signal, SignalValue
@@ -21,9 +22,9 @@ class AbsoluteValueNode(Node):
 				cp: SignalValue = result.getCheckpoint(i)
 				newTimestamp: float = -cp.getValue() / cp.getDerivative() + cp.getTime()
 				assert math.isclose(
-				    (newTimestamp - cp.getTime()) * cp.getDerivative() + cp.getValue(), 0, rel_tol=1e-6
+				    (newTimestamp - cp.getTime()) * cp.getDerivative() + cp.getValue(), 0, abs_tol=1e-7
 				), "Found zero point is not close to 0."
-				newTimestamps.append(newTimestamp)
+				newTimestamps.append(round(newTimestamp, 5))
 
 		for t in newTimestamps:
 			# Value is always zero, because we've computed timestamps where the value is zero.
@@ -32,8 +33,10 @@ class AbsoluteValueNode(Node):
 		result.recomputeDerivatives()
 		return computeAbsoluteValue(result)
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		result: Signal = self.children[0].booleanValidate(signals, plot)
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
+		result: Signal = self.children[0].booleanValidate(signals, plot, True)
+		if booleanize:
+			result = BooleanSignal.fromSignal(result)
 		result.setName('absolutevalue')
 		return result
 

@@ -17,11 +17,11 @@ class AndNode(FormulaNode):
 		result.recomputeDerivatives()
 		return result
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		lhs: Signal = self.children[0].booleanValidate(signals, plot)
-		rhs: Signal = self.children[1].booleanValidate(signals, plot)
-		result: Signal = BooleanSignal('and')
-		lhs, rhs = SignalList(BooleanSignal.computeComparableSignals(lhs, rhs))
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
+		lhs: BooleanSignal = self.children[0].booleanValidate(signals, plot, True)
+		rhs: BooleanSignal = self.children[1].booleanValidate(signals, plot, True)
+		result: BooleanSignal = BooleanSignal('and')
+		lhs, rhs = BooleanSignal.computeComparableSignals(lhs, rhs)
 		for i in range(lhs.getCheckpointCount()):
 			value = lhs.getValue(i) and rhs.getValue(i)
 			result.emplaceCheckpoint(lhs.getTime(i), value)

@@ -65,7 +65,7 @@ class Node:  # Abstract class
 		""" Compute the quantitative validation for this node (and its children) """
 		raise RuntimeError("Base quant validate")
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
 		""" Compute the boolean validation for this node (and its children) """
 		raise RuntimeError("Base bool validate")
 

@@ -46,14 +46,16 @@ class BinaryOperationNode(Node):
 		)
 		return self.__operationImplementation(childResults[0], childResults[1])
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
 		childResults = SignalList(
 		    BooleanSignal.computeComparableSignals(
-		        self.children[0].booleanValidate(signals, plot), self.children[1].booleanValidate(signals, plot)
+		        self.children[0].booleanValidate(signals, plot, True), self.children[1].booleanValidate(signals, plot, True)
 		    )
 		)
-		assert isinstance(childResults[0], BooleanSignal)
-		return self.__operationImplementation(childResults[0], childResults[1])
+		x = self.__operationImplementation(childResults[0], childResults[1])
+		if booleanize:
+			return BooleanSignal.fromSignal(x)
+		return x
 
 	def __operationImplementation(self, leftChildSignal: Signal, rightChildSignal: Signal) -> Signal:
 		""" Implementation of the binary operations.

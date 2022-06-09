@@ -6,8 +6,8 @@ from ....signals import Signal, BooleanSignal, SignalList
 class QuantitativeSignalNode(FormulaNode):
 	""" Node in STL ASTs representing quantitative Signal. """
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		result: BooleanSignal = self.children[0].booleanValidate(signals, plot)
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
+		result: BooleanSignal = self.children[0].booleanValidate(signals, plot, booleanize)
 		self.booleanPlot(plot, result)
 		return result
 

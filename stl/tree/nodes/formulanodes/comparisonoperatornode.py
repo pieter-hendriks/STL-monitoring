@@ -30,12 +30,12 @@ class ComparisonOperatorNode(FormulaNode):
 		self.filter = str(token)
 		self.operation = ComparisonOperatorNode.OPERATORS[self.filter]
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		lhs: BooleanSignal = self.children[0].booleanValidate(signals, plot)
-		rhs: BooleanSignal = self.children[1].booleanValidate(signals, plot)
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
+		lhs: BooleanSignal = self.children[0].booleanValidate(signals, plot, True)
+		rhs: BooleanSignal = self.children[1].booleanValidate(signals, plot, True)
 		result: BooleanSignal = BooleanSignal('comparison')
-		assert isinstance(lhs, BooleanSignal), "Input to boolean validate should always be BooleanSignal instances."
-		assert isinstance(rhs, BooleanSignal), "Input to boolean validate should always be BooleanSignal instances."
+		# assert isinstance(lhs, BooleanSignal), "Input to boolean validate should always be BooleanSignal instances."
+		# assert isinstance(rhs, BooleanSignal), "Input to boolean validate should always be BooleanSignal instances."
 		lhs, rhs = BooleanSignal.computeComparableSignals(lhs, rhs)
 		for i in range(lhs.getCheckpointCount()):
 			comparisonResult = self.operation(lhs.getValue(i), rhs.getValue(i))

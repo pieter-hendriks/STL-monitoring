@@ -35,11 +35,12 @@ class Signal:
 		if times is not None:
 			assert values is not None, "We can't autocompute values."
 			assert all(times[i] != times[i + 1] for i in range(len(times) - 1)), "debug assert: times mustn't be equal"
-			if len(times) != len(values):
-				assert len(times) == len(values)
+			assert len(times) == len(values), "Must have equal amount of times and values, if both provided"
 		elif values is not None:
+			# warnings.warn(f"Auto-generating timestamps for {self.name}")
+			times = [x for x in range(len(values))]
 			# This shouldn't be reached in our usual cases - autogenerating timestamps seems weird.
-			assert False, "DEBUG STATEMENT: May need to autogenerate timestamps here."
+			# assert False, "DEBUG STATEMENT: May need to autogenerate timestamps here."
 		# Set the variables to avoid errors in initialization
 
 		# If no values, the result should be empty signal
@@ -98,10 +99,10 @@ class Signal:
 	def computeCheckpointsForComparableSignal(cls, lhsSignal: 'Signal', rhsSignal: 'Signal') -> Tuple['Signal', 'Signal']:
 		""" Gets the checkpoints (sample points) with timestamps from either Signal
 		(computing interpolated value for the other Signal when necessary)
-		where the timestamps fall within the Interval in which both signals are defined (i.e. intersect(lhsInterval,)). """
+		where the timestamps fall within the Interval in which both signals are defined (i.e. intersect(lhsInterval,rhsInterval)). """
 		# These may be Signal or BooleanSignal; annotated Signal because BooleanSignal is a subclass
-		lhsResult: Signal = cls("lhs")
-		rhsResult: Signal = cls('rhs')
+		lhsResult: Signal = cls(lhsSignal.getName())
+		rhsResult: Signal = cls(rhsSignal.getName())
 		cp: SignalValue
 		if not lhsSignal.getTimes() or not rhsSignal.getTimes():
 			# If either signal is empty, the intersection is empty
@@ -194,7 +195,7 @@ class Signal:
 	def computeInterval(self, interval: Interval, half_open: bool = False) -> 'Signal':
 		""" Find the part of the signal that fits within the specified interval
 		 (endpoint inclusion based on value of 'half_open') """
-		constructedSignalName = f"{self.getName()}_interval"
+		constructedSignalName = f"{self.getName()}"
 		signalType = type(self)
 		output: 'Signal' = signalType(constructedSignalName)
 		# Handle cases where lower bound is larger or equal to biggest values in the Signal.
@@ -270,6 +271,8 @@ class Signal:
 		"""Grab representation of this signal in the format used in old version of the code.
 		May be useful to compare outputs between the versions."""
 		# pylint: disable=protected-access
+		if not self.getTimes()._lists:
+			return [[], [], []]
 		return [self.getTimes()._lists[0], self.getValues(), self.getDerivatives()]
 		# pylint: enable=protected-access
 
@@ -414,7 +417,7 @@ class Signal:
 		newCheckpoints: List[SignalValue] = []
 		for cp in self.checkpoints:
 			newCheckpoints.append(SignalValue(cp.getTime() + offset, cp.getValue(), cp.getDerivative()))
-		return self.fromCheckpoints(f"{self.name}_shift", newCheckpoints)
+		return self.fromCheckpoints(f"{self.name}", newCheckpoints)
 
 	def recomputeDerivatives(self):
 		"""Re-compute the derivatives part of each SignalValue, to make sure it matches the current values."""

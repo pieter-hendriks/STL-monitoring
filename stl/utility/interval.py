@@ -18,6 +18,10 @@ class Interval:
 		""" Get the upper limit of the interval. """
 		return self.upperLimit
 
+	def size(self) -> float:
+		""" Returns upper - lower """
+		return self.upperLimit - self.lowerLimit
+
 	@classmethod
 	def computeIntersection(cls, lhs: 'Interval', rhs: 'Interval') -> 'Interval':
 		""" Compute the intersection between the two intervals.

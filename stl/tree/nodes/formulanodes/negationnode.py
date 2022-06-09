@@ -7,8 +7,8 @@ from ....operators import computeNot
 class NegationNode(FormulaNode):
 	""" Node representing Negation operation in STL formula. """
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
-		childResult = self.children[0].booleanValidate(signals, plot)
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
+		childResult = self.children[0].booleanValidate(signals, plot, True)
 		result = BooleanSignal("negation", childResult.getTimes(), [0 if x == 1 else 1 for x in childResult.getValues()])
 		self.booleanPlot(plot, result)
 		return result

@@ -22,7 +22,13 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	# Initialize the output signal
 	out: Signal = signalType('timedEventually')
 	if inSignal.isEmpty() or interval.getLower() > interval.getUpper():
+		# If input signal empty, or interval invalid, return empty signal
 		return out
+	elif interval.getLower() == interval.getUpper():
+		# In case of interval size 0, this operation is the identity function
+		out: Signal = Signal.fromCheckpoints("timedEventually", inSignal.getCheckpoints())
+		return out
+
 	# Drop the prefix we ignore (lower bound of the interval) and shift the signal back to the same start time.
 	signal = inSignal.computeInterval(Interval(interval.getLower() + inSignal.getTime(0), float('inf')))
 	signal = inSignal.shift(-1 * interval.getLower())
@@ -30,10 +36,6 @@ def computeTimedEventually(inSignal: Signal, interval: Interval) -> Signal:
 	windowWidth: float = interval.getUpper() - interval.getLower()
 	# Set of potential maxima
 	maximumCandidates: List[SignalValue] = []
-	# In case of interval size 0, this operation is the identity function
-	if windowWidth == 0:
-		out: Signal = Signal.fromCheckpoints("timedEventually", signal.getCheckpoints())
-		return out
 	# In case of Singular signal (and non-zero sized interval), return an empty signal
 	if signal.isSingular():
 		return out

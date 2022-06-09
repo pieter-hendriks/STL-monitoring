@@ -30,18 +30,18 @@ def computeUntimedUntil(lhsSignal: Signal, rhsSignal: Signal) -> Signal:
 		assert (currentLhsInterval.getCheckpointCount() == currentRhsInterval.getCheckpointCount() == 2)
 		# https://link.springer.com/chapter/10.1007/978-3-642-39799-8_19
 		# Implementation of Algorithm 2
-		# slight corrections to match the section where they describe the math (Section 4, subsection 'Operatur U.', page 8)
+		# slight corrections to match the section where they describe the math (Section 4, subsection 'Operator U.', page 8)
 		if lhsSignal.getDerivative(currentIndex) <= 0:
-			constLhsUpper: Signal = signalType.createConstant('yconst', lhsSignal.getValue(currentIndex + 1))  # LHS(t) == OK
-			previousAndConstLhsUpper: Signal = computeAnd(constLhsUpper, previousValue)  # MIN(lhs(t), z(t)) == OK
+			constLhsSupremum: Signal = signalType.createConstant('leftconst', lhsSignal.getValue(currentIndex + 1))  # LHS(t) == OK
+			previousAndConstLhsUpper: Signal = computeAnd(constLhsSupremum, previousValue)  # MIN(lhs(t), z(t)) == OK
 			lhsAndRhs: Signal = computeAnd(currentRhsInterval, currentLhsInterval)  # MIN(rhs(tau), lhs(tau)) == OK
 			eventuallyLhsAndRhs: Signal = computeUntimedEventually(lhsAndRhs)  # SUP(MIN(rhs(tau), lhs(tau))) (==z_t(s)) == OK
 			outputSegment: Signal = computeOr(eventuallyLhsAndRhs, previousAndConstLhsUpper)  # MAX(zt(s), min(LHS,OLD)) == OK
 		else:
-			constLeft: Signal = signalType.createConstant("leftconst", lhsSignal.getValue(currentIndex))  # LHS(s) == OK
+			constLhsSupremum: Signal = signalType.createConstant("leftconst", lhsSignal.getValue(currentIndex))  # LHS(s) == OK
 			eventuallyRhs: Signal = computeUntimedEventually(currentRhsInterval)  # SUP(rhs) == OK
-			lhsAndEventuallyRhs: Signal = computeAnd(eventuallyRhs, constLeft)  # MIN(SUP(RHS), LHS(s)) == OK
-			lhsAndPrevious: Signal = computeAnd(constLeft, previousValue)  # MIN(LHS, OLD) == OK
+			lhsAndEventuallyRhs: Signal = computeAnd(eventuallyRhs, constLhsSupremum)  # MIN(SUP(RHS), LHS(s)) == OK
+			lhsAndPrevious: Signal = computeAnd(constLhsSupremum, previousValue)  # MIN(LHS, OLD) == OK
 			outputSegment: Signal = computeOr(lhsAndEventuallyRhs, lhsAndPrevious)  # MAX(zt(s), min(LHS,OLD)) == OK
 		for cp in outputSegment.getCheckpoints():
 			if currentInterval.contains(cp.getTime(), closed=False):

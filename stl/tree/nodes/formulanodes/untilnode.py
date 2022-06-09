@@ -11,7 +11,8 @@ class UntilNode(FormulaNode):
 
 	def __init__(self) -> None:
 		super().__init__()
-		self.__useSyntaxAlgorithm = False
+		self.useEfficientAlgorithm()
+		# self.useSyntaxAlgorithm()
 
 	def useSyntaxAlgorithm(self):
 		""" Sets the Until node to use the Syntax (inefficient) algorithm implementation. """
@@ -55,9 +56,9 @@ class UntilNode(FormulaNode):
 			name = "timedUntil"
 		# If we have three children, we have a timed eventually operation (interval (lower & upper), rhs)
 		elif len(self.children) == 3:
-			childResults: SignalList = SignalList(
+			childResults: SignalList = SignalList([
 			    Signal.createConstant('DummyTrueSignal', 1), self.children[2].quantitativeValidate(signals, plot)
-			)
+			])
 			name = "timedEventually"
 		# If we have two children, we have an untimed until operation (lhs, rhs)
 		elif len(self.children) == 2:
@@ -96,26 +97,26 @@ class UntilNode(FormulaNode):
 		self.quantitativePlot(plot, result)
 		return result
 
-	def booleanValidate(self, signals: SignalList, plot: bool) -> BooleanSignal:
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> BooleanSignal:
 		# Operator can be unary or binary;
 		# Children are 2 integers from the time interval, plus one or two formulas.
 		if len(self.children) == 4:
 			childResults: SignalList = SignalList(
-			    [self.children[0].booleanValidate(signals, plot), self.children[3].booleanValidate(signals, plot)]
+			    [self.children[0].booleanValidate(signals, plot, True), self.children[3].booleanValidate(signals, plot, True)]
 			)
 		else:
 			assert len(self.children) == 3
-			childResult: BooleanSignal = self.children[2].booleanValidate(signals, plot)
+			childResult: BooleanSignal = self.children[2].booleanValidate(signals, plot, True)
 			dummySignal: BooleanSignal = BooleanSignal(
 			    "DummyTrueSignal", childResult.getTimes(), [1] * childResult.getCheckpointCount(),
 			    [0] * childResult.getCheckpointCount()
 			)
 			childResults: SignalList = SignalList([dummySignal, childResult])
-		size = childResults[0].getCheckpointCount()
-
-		aSignal: BooleanSignal = self.children[-3].booleanValidate(signals, plot)
-		bSignal: BooleanSignal = self.children[-2].booleanValidate(signals, plot)
-		interval = Interval(aSignal.getValue(0), bSignal.getValue(0))
-		until = computeBooleanUntil(size, childResults, interval)
+		childResults = SignalList(BooleanSignal.computeComparableSignals(childResults[0], childResults[1]))
+		# Don't booleanize these, the interval is supposed to be real numbers. It's a time interval, not a signal value.
+		interval = Interval(self.children[-3].booleanValidate(signals, plot).getValue(0), self.children[-2].booleanValidate(signals, plot).getValue(0))
+		until = computeBooleanUntil(childResults[0], childResults[1], interval)
 		self.booleanPlot(plot, until)
+		if booleanize:
+			return BooleanSignal.fromSignal(until)
 		return until

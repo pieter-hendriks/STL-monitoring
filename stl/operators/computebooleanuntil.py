@@ -49,10 +49,10 @@ def computeBooleanUntil(lhs: BooleanSignal, rhs: BooleanSignal, interval: Interv
 			intersection = getTimeListIntersection(currentLhsInterval, currentRhsInterval)
 			if intersection:
 				interval = [max(0, intersection[0] - b), min(size, intersection[1] - a)]
-				assert interval[0] <= interval[1], "Non-existent interval, not sure how to handle this."
-				intersection = getTimeListIntersection(interval, currentLhsInterval)
-				if intersection:
-					resultIntervals.append(intersection)
+				if interval[0] <= interval[1]:
+					intersection = getTimeListIntersection(interval, currentLhsInterval)
+					if intersection:
+						resultIntervals.append(intersection)
 	# Calculate the entire until, make the intervals true in the until
 	until = BooleanSignal("booleanTimedUntil", rhs.getTimes(), [0] * size)
 	for untilInterval in resultIntervals:

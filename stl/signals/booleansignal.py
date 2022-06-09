@@ -72,3 +72,7 @@ class BooleanSignal(Signal):
 
 	def __str__(self):
 		return f"Boolean{super().__repr__()}"
+
+	@classmethod
+	def createConstant(cls, name: str, value: float, timestamps: List[float] = (0, float('inf'))) -> 'BooleanSignal':
+		return BooleanSignal.fromSignal(Signal.createConstant(name, value, timestamps))

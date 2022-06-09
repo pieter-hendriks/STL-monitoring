@@ -1,6 +1,6 @@
 """ Implementation for ValueNode class used in STL ASTs """
 from ..node import Node
-from ....signals import Signal, SignalList
+from ....signals import BooleanSignal, Signal, SignalList
 
 
 class ValueNode(Node):  # Abstract class
@@ -16,7 +16,9 @@ class ValueNode(Node):  # Abstract class
 
 	# ValueNodes are generally part of e.g. time intervals for operators
 	# Even in BooleanValidation contexts, they should return the actual value (not a booleanized version)
-	def booleanValidate(self, signals: SignalList, plot: bool) -> Signal:
+	def booleanValidate(self, signals: SignalList, plot: bool, booleanize=False) -> Signal:
+		if booleanize:
+			return BooleanSignal.createConstant("ValueNodeSignal", self.value)
 		return Signal.createConstant("ValueNodeSignal", self.value)
 
 	def text(self) -> str:

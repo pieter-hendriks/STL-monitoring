@@ -8,10 +8,9 @@ from .computetimedeventually import computeTimedEventually
 def computeTimedAlways(signal: Signal, interval: Interval) -> Signal:
 	""" Computes the timed always (globally) STL operation. Creates a new Signal instance to hold the result.  """
 	# always = not(eventually(not x))
-	signalType = type(signal)
-	notSignal: signalType = computeNot(signal)
-	eventuallyNotSignal: signalType = computeTimedEventually(notSignal, interval)
-	alwaysSignal: signalType = computeNot(eventuallyNotSignal)
+	notSignal: Signal = computeNot(signal)
+	eventuallyNotSignal: Signal = computeTimedEventually(notSignal, interval)
+	alwaysSignal: Signal = computeNot(eventuallyNotSignal)
 	alwaysSignal.setName("timedAlways")
 	alwaysSignal.recomputeDerivatives()
 	return alwaysSignal
