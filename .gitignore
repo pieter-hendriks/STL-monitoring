@@ -7,3 +7,4 @@ scratches/
 *.jar.old
 .vscode/
 .coverage
+*.pickle
