@@ -45,6 +45,14 @@ class Node:  # Abstract class
 		for child in node.children:
 			child.parent = self
 
+	def useEfficientAlgorithm(self) -> None:
+		for c in self.children:
+			c.useEfficientAlgorithm()
+
+	def useSyntaxAlgorithm(self) -> None:
+		for c in self.children:
+			c.useSyntaxAlgorithm()
+
 	# Execute the (stl) node
 	# Expects a pandas dataframe with the signals
 	# Expects a string with the type of semantic that will be used

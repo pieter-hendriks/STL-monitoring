@@ -179,7 +179,7 @@ class Signal:
 		value = self.getValue(i - 1)
 		derivative = self.getDerivative(i - 1)
 		# fraction of the way the interpolated point is between the point at i-1 and i
-		fraction = (t - self.getTime(i - 1)) / (self.getTime(i) - self.getTime(i - 1))
+		fraction = (t - self.getTime(i - 1))#  / (self.getTime(i) - self.getTime(i - 1))
 		value += derivative * fraction
 		return value
 

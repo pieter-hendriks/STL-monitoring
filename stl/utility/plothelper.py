@@ -2,7 +2,7 @@
 import matplotlib.pyplot as plt
 from .helpers import cm2inch
 from .singleton import Singleton
-
+import math
 
 class PlotHelper(metaclass=Singleton):
 	""" Singleton class to manage various plots used throughout the STL implementation """
@@ -24,7 +24,9 @@ class PlotHelper(metaclass=Singleton):
 	def createSubplots(self, count):
 		""" Add a subplot to the current figure """
 		self.__figure, self.__axs = plt.subplots(count, sharex=True, sharey=True)
-		self.__figure.set_size_inches(cm2inch(15), cm2inch(count * 3))
+		print(f"Creating {count} figures")
+		self.__figure.set_size_inches(cm2inch(15), cm2inch(count * math.ceil(count/5)))
+		plt.subplots_adjust(hspace=0.5)
 
 	def booleanPlot(self, xValues, yValues, title, fmt='r-'):
 		""" Plot a boolean Signal (step fn) """
@@ -46,6 +48,8 @@ class PlotHelper(metaclass=Singleton):
 	# pylint: disable=no-self-use
 	def show(self):
 		""" Show the created figure. """
-		plt.show()
+		self.__figure.savefig("robustness.png")
+		# plt.show()
+
 
 	# pylint: enable=no-self-use

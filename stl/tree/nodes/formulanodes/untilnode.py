@@ -11,19 +11,23 @@ class UntilNode(FormulaNode):
 
 	def __init__(self) -> None:
 		super().__init__()
-		self.useEfficientAlgorithm()
-		# self.useSyntaxAlgorithm()
+		self.__useSyntaxAlgorithm = False
 
 	def useSyntaxAlgorithm(self):
 		""" Sets the Until node to use the Syntax (inefficient) algorithm implementation. """
 		self.__useSyntaxAlgorithm = True
+		for c in self.children:
+			c.useSyntaxAlgorithm()
 
 	def useEfficientAlgorithm(self):
 		""" Sets the Until node to use the efficient algorithm implementation. """
 		self.__useSyntaxAlgorithm = False
+		for c in self.children:
+			c.useEfficientAlgorithm()
 
 	def __handleEfficientAlgorithm(self, signals: SignalList, plot: bool) -> Signal:
 		""" Prepares the data for use with the efficient algorithm and then calls the operation """
+
 		if len(self.children) in [2, 4]:
 			childSignals = SignalList(
 			    self.children[0].quantitativeValidate(signals, plot), self.children[-1].quantitativeValidate(signals, plot)

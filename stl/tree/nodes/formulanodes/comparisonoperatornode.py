@@ -58,4 +58,4 @@ class ComparisonOperatorNode(FormulaNode):
 		return result
 
 	def text(self) -> str:
-		return 'BooleanFilter' + ' [' + str(self.id) + ']: ' + self.filter
+		return 'ComparisonOperator' + ' [' + str(self.id) + ']: ' + self.filter
