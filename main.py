@@ -4,17 +4,12 @@ import pandas as pd
 from antlr4 import *
 from stl.parsing import stlLexer, CustomStlListener, stlParser
 from stl.signals import SignalList
+import time
+from stl.utility import PlotHelper
 
-
-def main(argv):
-	# TODO: Add argument checker
-
-	# Start a timer to time the whole process
-	# import time
-	# start = time.time()
-
+def main(formulafile: str, signalfile: str, semantics: str, algorithm: str):
 	# Check the STL fomula
-	text = FileStream(argv[1], encoding='utf-8')
+	text = FileStream(formulafile, encoding='utf-8')
 	lexer = stlLexer(text)
 	stream = CommonTokenStream(lexer)
 	parser = stlParser(stream)
@@ -26,26 +21,29 @@ def main(argv):
 	walker.walk(listener, tree)
 	parser.addParseListener(listener)
 	stlTree = listener.stlTree
-
-	# TODO: make a min length algo that indicates how long signals should be to be validated
-	#  + checks if the given is long enough
+	if algorithm == 'efficient':
+		stlTree.useEfficientAlgorithm()
+	elif algorithm == 'syntax':
+		stlTree.useSyntaxAlgorithm()
+	else:
+		raise RuntimeError("Unknown algorithm type")
 
 	# Print the STL tree
 	with open('stlTree.dot', 'w') as file:
 		stlTree.toDot(file)
 
 	# Read the signals
-	# signals = pd.read_csv(argv[2])
-	signals2 = SignalList.fromCSV(argv[2])
-	# Check if a semantic was given:
-	if len(argv) < 4:
-		argv.append('quantitative')
+	signals2 = SignalList.fromCSV(signalfile)
 
 	# Validate the signals with the STL formula
-	result = stlTree.validate(signals2, semantic=argv[3].lower(), plot=False)
+	# s = time.time()
+	result = stlTree.validate(signals2, semantic=semantics, plot=True)
+	# print(f"time = {time.time() - s}")
 	#print(result)
 	#print(result.oldFormat())
 	#print(result.getCheckpointCount())
+
+	print(result)
 
 
 	# import numpy as np
@@ -59,5 +57,32 @@ def main(argv):
 
 
 if __name__ == '__main__':
-	main(sys.argv)
-	#main(['', 'formula.stl', 'signals/ex_1c.csv', 'quantitative'])
+	# First is name of exec, second formula file, third signals input
+	# Fourth is semantics specification (one of ['quantitative', 'boolean']), optional (default = quantitative)
+	# Fifth is the algorithm used in quantitative semantics (one of ['efficient', 'syntax']), optional (default = efficient)
+	print(len(sys.argv))
+	print(sys.argv)
+	for i in range(1, len(sys.argv)):
+		sys.argv[i] = sys.argv[i].lower()
+	if len(sys.argv) < 3:
+		print("Expected at least two input parameters to this script: formula file and signal input file")
+		exit(0)
+	else:
+		if len(sys.argv) == 3:
+			sys.argv.append("quantitative")
+		if len(sys.argv) >= 4:
+			if sys.argv[3] not in ['quantitative', 'boolean']:
+				print("Expected the semantic specification (third argument) to be either 'quantitative' or 'boolean'")
+				exit(0)
+			else:
+				if len(sys.argv) == 4:
+					sys.argv.append("efficient")
+				if len(sys.argv) >= 5:
+					if sys.argv[4] not in ['efficient', 'syntax']:
+						print("Expected the algorithm specification (fourth argument) to be either 'efficient' or 'syntax'")
+						exit(0)
+					if len(sys.argv) > 5:
+						print("Found more parameters than expected. Ignoring all parameters after the fourth.")
+	main(formulafile=sys.argv[1], signalfile=sys.argv[2], semantics=sys.argv[3], algorithm=sys.argv[4])
+	# main(sys.argv)
+	#main(['', 'formula.stl', 'signals/ex_1c.csv', 'quantitative', 'efficient'])
