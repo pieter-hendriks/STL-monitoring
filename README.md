@@ -3,7 +3,7 @@
 An easy to use tool written in Python to perform Signal Temporal Logic monitoring is presented in this repository. Both validation with Boolean semantics and Robustness estimate computation with quantitative semantics are supported.
 This tool is part of the Research Project "[Signal Temporal Logic Monitoring and Online Robustness Approximation](readme_resources/Signal%20Temporal%20Logic%20Monitoring%20and%20Online%20Robustness%20Approximation.pdf)" which is performed on the University of Antwerp.
 
-An extension has been made in "[Learning an Online STL Robustness Monitor](readme_resources/Learning_an_Online_STL_Robustness_Monitor.pdf)"
+An extension has been made in "[Learning an Online STL Robustness Monitor](readme_resources/Learning_an_Efficient_Online_STL_Robustness_Monitor.pdf)"
 
 ## Introduction
 
